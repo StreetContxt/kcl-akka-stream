@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%date{ISO8601} %-5level %logger - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <logger name="akka" level="WARN" />
+    <logger name="com.amazonaws.services.kinesis.metrics" level="OFF" />
+    <logger name="com.amazonaws.services.kinesis.metrics.impl.MetricsHelper" level="OFF" />
+    <logger name="com.amazonaws.services.kinesis.producer" level="OFF" />
+
+    <root level="INFO">
+        <appender-ref ref="STDOUT" />
+    </root>
+
+</configuration>
