@@ -4,6 +4,7 @@ val TestAndIntegrationTest = "test,it"
 
 organization in ThisBuild := "com.contxt"
 scalaVersion in ThisBuild := "2.11.8"
+version in ThisBuild := "1.0.0-SNAPSHOT"
 
 val slf4j = "org.slf4j" % "slf4j-api" % "1.7.21"
 val logback = "ch.qos.logback" % "logback-classic" % "1.2.3"
