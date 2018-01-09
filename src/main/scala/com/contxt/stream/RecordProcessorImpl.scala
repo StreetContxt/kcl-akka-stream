@@ -8,7 +8,6 @@ import com.amazonaws.services.kinesis.clientlibrary.interfaces.IRecordProcessorC
 import com.amazonaws.services.kinesis.clientlibrary.interfaces.v2.{ IRecordProcessor, IShutdownNotificationAware }
 import com.amazonaws.services.kinesis.clientlibrary.lib.worker.ShutdownReason
 import com.amazonaws.services.kinesis.clientlibrary.types._
-import com.contxt.stream.CheckpointLog._
 import java.time.ZonedDateTime
 import org.slf4j.LoggerFactory
 import scala.collection.immutable.Queue
@@ -75,22 +74,24 @@ private[stream] class ShardCheckpointTracker(shardCheckpointConfig: ShardCheckpo
 }
 
 private[stream] class RecordProcessorImpl(
-  kinesisStreamId: KinesisStreamId,
+  kinesisAppId: KinesisAppId,
   streamKillSwitch: KillSwitch,
   terminationFuture: Future[Done],
   queue: SourceQueueWithComplete[IndexedSeq[KinesisRecord]],
   shardCheckpointConfig: ShardCheckpointConfig,
-  checkpointLog: CheckpointLog
+  consumerStats: ConsumerStats
 ) extends IRecordProcessor with IShutdownNotificationAware {
   private val log = LoggerFactory.getLogger(getClass)
 
   private val shardCheckpointTracker = new ShardCheckpointTracker(shardCheckpointConfig)
   private var shardId: String = _
+  private lazy val shardConsumerId = ShardConsumerId(kinesisAppId, shardId)
 
   override def initialize(initializationInput: InitializationInput): Unit = {
     shardId = initializationInput.getShardId
     val offsetString = getOffsetString(initializationInput.getExtendedSequenceNumber)
-    log.info(s"Starting $shardInfo at $offsetString.")
+    consumerStats.reportInitialization(shardConsumerId)
+    log.info(s"Starting $shardConsumerId at $offsetString.")
   }
 
   override def processRecords(processRecordsInput: ProcessRecordsInput): Unit = {
@@ -120,25 +121,33 @@ private[stream] class RecordProcessorImpl(
         checkpointAndHandleErrors(shutdownInput.getCheckpointer, shardEnd = true)
 
       case ShutdownReason.REQUESTED =>
-        shutdownRequested(shutdownInput.getCheckpointer)
+        /* The shutdown can be requested due to a stream failure or downstream cancellation. In either of these cases,
+         * some records will never be processed, so we should not block waiting for all the records to complete.
+         * Additionally, when we know the stream failed, and is being torn down, it's pointless to wait for in-flight
+         * records to complete. */
+        waitForInFlightRecordsUnlessStreamFailed(shardCheckpointConfig.maxWaitForCompletionOnStreamShutdown)
+        checkpointAndHandleErrors(shutdownInput.getCheckpointer)
     }
 
     queue.complete()
-    log.info(s"Finished shutting down $shardInfo, reason: $shutdownReason.")
+    consumerStats.reportShutdown(shardConsumerId, shutdownReason)
+    log.info(s"Finished shutting down $shardConsumerId, reason: $shutdownReason.")
   }
 
   override def shutdownRequested(checkpointer: IRecordProcessorCheckpointer): Unit = {
-    /* The shutdown can be requested due to a stream failure or downstream cancellation. In either of these cases, some
-     * records will never be processed, so we should not block waiting for all the records to complete.
-     * Additionally, when we know the stream failed, and is being torn down, it's pointless to wait for in-flight
-     * records to complete. */
-    waitForInFlightRecordsUnlessStreamFailed(shardCheckpointConfig.maxWaitForCompletionOnStreamShutdown)
-    checkpointAndHandleErrors(checkpointer)
+    shutdown(
+      new ShutdownInput()
+        .withCheckpointer(checkpointer)
+        .withShutdownReason(ShutdownReason.REQUESTED)
+    )
   }
 
   private def blockToEnqueueAndHandleResult(kinesisRecords: IndexedSeq[KinesisRecord]): Unit = {
     try {
-      val enqueueFuture = queue.offer(kinesisRecords)
+      kinesisRecords.foreach(consumerStats.trackRecord(shardConsumerId, _))
+      val enqueueFuture = consumerStats.trackBatchEnqueue(shardConsumerId, kinesisRecords.size) {
+        queue.offer(kinesisRecords)
+      }
       Await.result(enqueueFuture, Duration.Inf) match {
         case QueueOfferResult.Enqueued =>
         // Do nothing.
@@ -165,16 +174,16 @@ private[stream] class RecordProcessorImpl(
         // Checkpointing the actual offset is not enough. Instead, we are required to use the checkpoint()
         // method without arguments, which is not covered by Kinesis documentation.
         checkpointer.checkpoint()
-        checkpointLog.checkpointEvent(ShardKey(kinesisStreamId, shardId), CheckpointShardEndAck)
-        log.info(s"Successfully checkpointed $shardInfo at SHARD_END.")
+        consumerStats.checkpointShardEndAcked(shardConsumerId)
+        log.info(s"Successfully checkpointed $shardConsumerId at SHARD_END.")
       }
       else {
         shardCheckpointTracker.checkpointLastCompletedRecord { kinesisRecord =>
           val seqNumber = kinesisRecord.sequenceNumber
           val subSeqNumber = kinesisRecord.subSequenceNumber.getOrElse(0L)
           checkpointer.checkpoint(seqNumber, subSeqNumber)
-          checkpointLog.checkpointEvent(ShardKey(kinesisStreamId, shardId), CheckpointAck(seqNumber, subSeqNumber))
-          log.info(s"Successfully checkpointed $shardInfo at ${kinesisRecord.offsetString}.")
+          consumerStats.checkpointAcked(shardConsumerId)
+          log.info(s"Successfully checkpointed $shardConsumerId at ${kinesisRecord.offsetString}.")
         }
       }
     }
@@ -183,11 +192,12 @@ private[stream] class RecordProcessorImpl(
         // Do nothing.
 
       case e@(_: ThrottlingException | _: KinesisClientLibDependencyException) =>
-        checkpointLog.checkpointEvent(ShardKey(kinesisStreamId, shardId), CheckpointThrottled)
-        log.error(s"Failed to checkpoint $shardInfo, will retry later.", e)
+        consumerStats.checkpointDelayed(shardConsumerId, e)
+        log.error(s"Failed to checkpoint $shardConsumerId, will retry later.", e)
 
       case NonFatal(e) =>
-        log.error(s"Failed to checkpoint $shardInfo, failing the streaming...", e)
+        consumerStats.checkpointFailed(shardConsumerId, e)
+        log.error(s"Failed to checkpoint $shardConsumerId, failing the streaming...", e)
         streamKillSwitch.abort(e)
     }
   }
@@ -209,12 +219,6 @@ private[stream] class RecordProcessorImpl(
       else false
     }
     if (!hasStreamFailed) Try(Await.result(shardCheckpointTracker.allInFlightRecordsCompetedFuture, waitDuration))
-  }
-
-  private def shardInfo: String = {
-    val streamName = kinesisStreamId.streamName
-    val applicationName = kinesisStreamId.applicationName
-    s"ShardProcessor(streamName=$streamName, shardId=$shardId, applicationName=$applicationName)"
   }
 
   private def getOffsetString(n: ExtendedSequenceNumber): String = {

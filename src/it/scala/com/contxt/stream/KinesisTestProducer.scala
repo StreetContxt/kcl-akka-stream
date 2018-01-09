@@ -2,50 +2,34 @@ package com.contxt.stream
 
 import akka.NotUsed
 import akka.stream.scaladsl._
-import com.amazonaws.services.kinesis.producer.{ KinesisProducer, KinesisProducerConfiguration, UserRecordResult }
-import com.google.common.util.concurrent.ListenableFuture
+import com.amazonaws.services.kinesis.producer.{ KinesisProducerConfiguration, UserRecordResult }
+import com.contxt.kinesis.ScalaKinesisProducer
 import java.nio.ByteBuffer
-import scala.concurrent.{ blocking, ExecutionContextExecutor, Future, Promise }
+import scala.concurrent.Future
 import scala.language.implicitConversions
-import scala.util.Try
 
-class KinesisTestProducer(streamName: String, producer: KinesisProducer) {
+class KinesisTestProducer(producer: ScalaKinesisProducer) {
   def send(key: String, message: String): Future[UserRecordResult] = {
     val messageData = ByteBuffer.wrap(message.getBytes("UTF-8"))
-    producer.addUserRecord(streamName, key, messageData)
+    producer.send(key, messageData)
   }
 
-  def flushAndWait(): Unit = {
-    producer.flushSync()
-  }
-
-  def shutdown(): Unit = {
-    flushAndWait()
-    producer.destroy()
-  }
-
-  private implicit def listenableToScalaFuture[A](listenable: ListenableFuture[A]): Future[A] = {
-    implicit val executionContext: ExecutionContextExecutor = scala.concurrent.ExecutionContext.global
-    val promise = Promise[A]
-    val callback = new Runnable {
-      override def run(): Unit = promise.tryComplete(Try(listenable.get()))
-    }
-    listenable.addListener(callback, executionContext)
-    promise.future
+  def shutdown(): Future[Unit] = {
+    producer.shutdown()
   }
 }
 
 object KinesisTestProducer {
-  def apply(producerConfig: KinesisProducerConfiguration, streamName: String): KinesisTestProducer = {
-    val producer = new KinesisProducer(producerConfig)
-    new KinesisTestProducer(streamName, producer)
+  def apply(streamName: String, producerConfig: KinesisProducerConfiguration): KinesisTestProducer = {
+    val producer = ScalaKinesisProducer(streamName, producerConfig)
+    new KinesisTestProducer(producer)
   }
 
   def sink(
-    producerConfig: KinesisProducerConfiguration, streamName: String
+    streamName: String, producerConfig: KinesisProducerConfiguration
   ): Sink[(String, String), Future[Seq[(String, String)]]] = {
     import scala.concurrent.ExecutionContext.Implicits.global
-    val producer = KinesisTestProducer(producerConfig, streamName)
+    val producer = KinesisTestProducer(streamName, producerConfig)
 
     Flow[(String, String)]
       .groupBy(maxSubstreams = Int.MaxValue, { case (key, message) => key })
@@ -59,7 +43,7 @@ object KinesisTestProducer {
       .mergeSubstreams
       .watchTermination()(Keep.right)
       .mapMaterializedValue { terminationFuture =>
-        terminationFuture.onComplete(_ => blocking(producer.shutdown()))
+        terminationFuture.onComplete(_ => producer.shutdown())
         NotUsed
       }
       .toMat(Sink.seq)(Keep.right)

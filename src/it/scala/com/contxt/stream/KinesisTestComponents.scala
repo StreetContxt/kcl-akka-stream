@@ -47,23 +47,23 @@ trait KinesisTestComponents {
   }
 
   protected def producerSink[A](implicit config: TestStreamConfig): Sink[KeyAndMessage, Future[Seq[KeyAndMessage]]] = {
-    KinesisTestProducer.sink(config.kplConfig, config.streamName)
+    KinesisTestProducer.sink(config.streamName, config.kplConfig)
   }
 
   protected def withConsumerSource[A](workerId: String)(
-    closure: (Source[KinesisRecord, NotUsed], InspectableCheckpointLog) => A
+    closure: (Source[KinesisRecord, NotUsed], InspectableConsumerStats) => A
   )(implicit config: TestStreamConfig): A = {
-    val checkpointLog = new InspectableCheckpointLog
+    val consumerStats = new InspectableConsumerStats
     val (consumerSource, materializationFuture) = liftMaterializedValue {
       KinesisSource(
         KinesisSource.createKclWorker,
         config.kclConfig(workerId),
         config.shardCheckpointConfig,
-        checkpointLog
+        consumerStats
       )
         .viaMat(KillSwitches.single)(Keep.both)
     }
-    val closureResult = Try(closure(consumerSource, checkpointLog))
+    val closureResult = Try(closure(consumerSource, consumerStats))
     Try { // Always keep the original test exception, and try to shutdown cleanly if possible.
       val (workerTerminationFuture, killSwitch) = Await.result(materializationFuture, 0.second)
       killSwitch.shutdown()
