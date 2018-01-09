@@ -1,4 +1,4 @@
-package com.contxt.stream
+package com.contxt.kinesis
 
 import akka.actor.ActorSystem
 import akka.stream._
@@ -8,7 +8,7 @@ import org.scalatest._
 import scala.concurrent.duration._
 import org.scalatest.concurrent.Eventually._
 import org.scalatest.time._
-import com.contxt.stream.MessageUtil._
+import com.contxt.kinesis.MessageUtil._
 import org.slf4j.LoggerFactory
 import scala.concurrent.Await
 import scala.util.{ Failure, Success, Try }

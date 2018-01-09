@@ -1,9 +1,8 @@
-package com.contxt.stream
+package com.contxt.kinesis
 
 import akka.NotUsed
 import akka.stream.scaladsl._
 import com.amazonaws.services.kinesis.producer.{ KinesisProducerConfiguration, UserRecordResult }
-import com.contxt.kinesis.ScalaKinesisProducer
 import java.nio.ByteBuffer
 import scala.concurrent.Future
 import scala.language.implicitConversions

@@ -1,4 +1,4 @@
-package com.contxt.stream
+package com.contxt.kinesis
 
 import akka.Done
 import akka.stream.{ KillSwitch, QueueOfferResult }
@@ -17,7 +17,7 @@ import scala.util.Try
 import scala.util.control.NonFatal
 import scala.collection.JavaConversions._
 
-private[stream] class ShardCheckpointTracker(shardCheckpointConfig: ShardCheckpointConfig) {
+private[kinesis] class ShardCheckpointTracker(shardCheckpointConfig: ShardCheckpointConfig) {
   private var inFlightRecords = Queue.empty[KinesisRecord]
   private var lastCheckpointedAt = ZonedDateTime.now()
   private var lastCompletedButNotCheckpointed = Option.empty[KinesisRecord]
@@ -73,7 +73,7 @@ private[stream] class ShardCheckpointTracker(shardCheckpointConfig: ShardCheckpo
   }
 }
 
-private[stream] class RecordProcessorImpl(
+private[kinesis] class RecordProcessorImpl(
   kinesisAppId: KinesisAppId,
   streamKillSwitch: KillSwitch,
   terminationFuture: Future[Done],

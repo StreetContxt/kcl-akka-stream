@@ -1,4 +1,4 @@
-package com.contxt.stream
+package com.contxt.kinesis
 
 import akka.Done
 import akka.util.ByteString
@@ -31,12 +31,12 @@ case class KinesisRecord(
 ) {
   private val completionPromise = Promise[Done]
 
-  private[stream] def completionFuture: Future[Done] = completionPromise.future
+  private[kinesis] def completionFuture: Future[Done] = completionPromise.future
 
   /** Record marked as processed are eligible for being checkpointed at driver's discretion. */
   def markProcessed(): Unit = completionPromise.trySuccess(Done)
 
-  private[stream] def offsetString: String = {
+  private[kinesis] def offsetString: String = {
     subSequenceNumber match {
       case Some(definedSubSequence) => s"Offset(sequenceNumber=$sequenceNumber, subSequenceNumber=$definedSubSequence)"
       case None => s"Offset(sequenceNumber=$sequenceNumber)"

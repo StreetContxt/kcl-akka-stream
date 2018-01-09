@@ -1,4 +1,4 @@
-package com.contxt.stream
+package com.contxt.kinesis
 
 import akka.NotUsed
 import akka.stream.{ ActorMaterializer, KillSwitches, ThrottleMode, UniqueKillSwitch }

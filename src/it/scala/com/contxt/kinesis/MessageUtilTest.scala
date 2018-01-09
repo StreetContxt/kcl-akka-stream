@@ -1,4 +1,4 @@
-package com.contxt.stream
+package com.contxt.kinesis
 
 import org.scalatest.{ Matchers, WordSpec }
 

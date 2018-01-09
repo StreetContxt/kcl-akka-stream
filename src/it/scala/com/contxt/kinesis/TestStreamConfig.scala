@@ -1,4 +1,4 @@
-package com.contxt.stream
+package com.contxt.kinesis
 
 import com.amazonaws.auth.AWSCredentialsProviderChain
 import com.amazonaws.services.kinesis.clientlibrary.lib.worker.{ DataFetchingStrategy, InitialPositionInStream, KinesisClientLibConfiguration }

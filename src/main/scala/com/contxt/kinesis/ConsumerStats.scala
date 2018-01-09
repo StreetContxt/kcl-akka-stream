@@ -1,4 +1,4 @@
-package com.contxt.stream
+package com.contxt.kinesis
 
 import akka.stream.QueueOfferResult
 import com.amazonaws.services.kinesis.clientlibrary.lib.worker.ShutdownReason

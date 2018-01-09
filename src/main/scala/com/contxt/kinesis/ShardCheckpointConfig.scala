@@ -1,4 +1,4 @@
-package com.contxt.stream
+package com.contxt.kinesis
 
 import com.typesafe.config.Config
 import scala.concurrent.duration._

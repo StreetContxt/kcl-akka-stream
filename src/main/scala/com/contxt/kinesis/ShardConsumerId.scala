@@ -1,4 +1,4 @@
-package com.contxt.stream
+package com.contxt.kinesis
 
 case class ShardConsumerId(
   regionName: String,
@@ -8,7 +8,7 @@ case class ShardConsumerId(
 )
 
 object ShardConsumerId {
-  def apply(appId: KinesisAppId, shardId: String): ShardConsumerId = {
+  private[kinesis] def apply(appId: KinesisAppId, shardId: String): ShardConsumerId = {
     ShardConsumerId(appId.regionName, appId.streamName, appId.applicationName, shardId)
   }
 }

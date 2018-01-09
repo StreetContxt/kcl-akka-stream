@@ -1,4 +1,4 @@
-package com.contxt.stream
+package com.contxt.kinesis
 
 import akka.stream.{ Attributes, Inlet, SinkShape }
 import akka.stream.scaladsl.Sink
@@ -46,7 +46,7 @@ object Inspectable {
   }
 }
 
-private[stream] class InspectableConsumerStats extends NoopConsumerStats {
+private[kinesis] class InspectableConsumerStats extends NoopConsumerStats {
   import InspectableConsumerStats._
   private val checkpointEventsByShardConsumer = new ConcurrentLinkedQueue[(ShardConsumerId, CheckpointEvent)]
 

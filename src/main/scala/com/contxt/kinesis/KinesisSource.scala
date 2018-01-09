@@ -1,4 +1,4 @@
-package com.contxt.stream
+package com.contxt.kinesis
 
 import akka.stream._
 import akka.stream.scaladsl._
@@ -52,7 +52,7 @@ object KinesisSource {
     KinesisSource(createKclWorker, kclConfig, shardCheckpointConfig, consumerStats)
   }
 
-  private[stream] def apply(
+  private[kinesis] def apply(
     workerFactory: (IRecordProcessorFactory, KinesisClientLibConfiguration) => ManagedWorker,
     kclConfig: KinesisClientLibConfiguration,
     shardCheckpointConfig: ShardCheckpointConfig,
@@ -81,7 +81,7 @@ object KinesisSource {
       .mapConcat(_.toIndexedSeq)
   }
 
-  private[stream] def createKclWorker(
+  private[kinesis] def createKclWorker(
     recordProcessorFactory: IRecordProcessorFactory,
     kclConfig: KinesisClientLibConfiguration
   ): ManagedWorker = {
@@ -120,17 +120,17 @@ object KinesisSource {
   }
 }
 
-private[stream] trait ManagedWorker {
+private[kinesis] trait ManagedWorker {
   def run(): Unit
   def shutdownAndWait(): Unit
 }
 
-private[stream] class ManagedKinesisWorker(private val worker: Worker) extends ManagedWorker {
+private[kinesis] class ManagedKinesisWorker(private val worker: Worker) extends ManagedWorker {
   def run(): Unit = worker.run()
   def shutdownAndWait(): Unit = worker.startGracefulShutdown().get
 }
 
-private[stream] class RecordProcessorFactoryImpl(
+private[kinesis] class RecordProcessorFactoryImpl(
   kinesisAppId: KinesisAppId,
   streamKillSwitch: KillSwitch,
   terminationFuture: Future[Done],
@@ -153,7 +153,7 @@ private[stream] class RecordProcessorFactoryImpl(
   }
 }
 
-private[stream] object BlockingContext {
+private[kinesis] object BlockingContext {
   private val log = LoggerFactory.getLogger(getClass)
   private val threadId = new AtomicInteger(1)
 
