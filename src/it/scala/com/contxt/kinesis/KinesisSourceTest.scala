@@ -1,4 +1,4 @@
-package com.contxt.stream
+package com.contxt.kinesis
 
 import akka.actor.ActorSystem
 import akka.stream._
@@ -8,7 +8,7 @@ import org.scalatest._
 import scala.concurrent.duration._
 import org.scalatest.concurrent.Eventually._
 import org.scalatest.time._
-import com.contxt.stream.MessageUtil._
+import com.contxt.kinesis.MessageUtil._
 import org.slf4j.LoggerFactory
 import scala.concurrent.Await
 import scala.util.{ Failure, Success, Try }
@@ -69,7 +69,7 @@ class KinesisSourceTest
           .toMat(producerSink)(Keep.both)
           .run()
 
-        withConsumerSource("goodConsumer") { (consumerSource1, checkpointLog1) =>
+        withConsumerSource("goodConsumer") { (consumerSource1, consumerStats1) =>
           val inspectReceived1 = runKinesisSourceWithInspection(consumerSource1)
 
           withConsumerSource("borkenConsumer") { (consumerSource2, _) =>
@@ -78,10 +78,10 @@ class KinesisSourceTest
               .runWith(Inspectable.sink)
 
             eventually(require(inspectReceived2().size > minUncommitedRecordsBeforeBadConsumerShutdown))
-            checkpointLog1.waitForAtLeastOneCheckpointPerShard(halfShardCount)
+            consumerStats1.waitForAtLeastOneCheckpointPerShard(halfShardCount)
           }
 
-          checkpointLog1.waitForAtLeastOneCheckpointPerShard(initialShardCount)
+          consumerStats1.waitForAtLeastOneCheckpointPerShard(initialShardCount)
           producerKillSwitch.shutdown()
 
           eventually {
@@ -99,14 +99,14 @@ class KinesisSourceTest
           .toMat(producerSink)(Keep.both)
           .run()
 
-        withConsumerSource("consumer1") { (consumerSource1, checkpointLog1) =>
+        withConsumerSource("consumer1") { (consumerSource1, consumerStats1) =>
           val inspectReceived1 = runKinesisSourceWithInspection(consumerSource1)
-          checkpointLog1.waitForAtLeastOneCheckpointPerShard(initialShardCount)
+          consumerStats1.waitForAtLeastOneCheckpointPerShard(initialShardCount)
 
           // Kicking off another consumer source will trigger rebalancing.
-          withConsumerSource("consumer2") { (consumerSource2, checkpointLog2) =>
+          withConsumerSource("consumer2") { (consumerSource2, consumerStats2) =>
             val inspectReceived2 = runKinesisSourceWithInspection(consumerSource2)
-            checkpointLog2.waitForAtLeastOneCheckpointPerShard(halfShardCount)
+            consumerStats2.waitForAtLeastOneCheckpointPerShard(halfShardCount)
             producerKillSwitch.shutdown()
 
             eventually {
@@ -127,15 +127,15 @@ class KinesisSourceTest
 
         val bootstrapProducerKillSwitch = bootstrapProducer(keyCount).run()
 
-        withConsumerSource("consumer1") { (consumerSource1, checkpointLog1) =>
+        withConsumerSource("consumer1") { (consumerSource1, consumerStats1) =>
           val inspectReceived1 = runKinesisSourceWithInspection(consumerSource1.via(filterBootstrapMessages))
 
-          val consumer2ClosureResult = withConsumerSource("consumer2") { (consumerSource2, checkpointLog2) =>
+          val consumer2ClosureResult = withConsumerSource("consumer2") { (consumerSource2, consumerStats2) =>
             val inspectReceived2 = runKinesisSourceWithInspection(consumerSource2.via(filterBootstrapMessages))
 
             // Wait for both consumers to start and divide up the shards.
-            checkpointLog1.waitForAtLeastOneCheckpointPerShard(halfShardCount)
-            checkpointLog2.waitForAtLeastOneCheckpointPerShard(halfShardCount)
+            consumerStats1.waitForAtLeastOneCheckpointPerShard(halfShardCount)
+            consumerStats2.waitForAtLeastOneCheckpointPerShard(halfShardCount)
             bootstrapProducerKillSwitch.shutdown()
 
             val (producerKillSwitch, sentFuture) =
@@ -151,14 +151,14 @@ class KinesisSourceTest
               val keysFromConsumer2 = groupByKey(inspectReceived2()).keySet.size
               require(keysFromConsumer2 >= keysPerConsumerForSuccessfulWarmup)
             }
-            checkpointLog1.waitForAtLeastOneCheckpointPerShard(halfShardCount)
-            checkpointLog2.waitForAtLeastOneCheckpointPerShard(halfShardCount)
+            consumerStats1.waitForAtLeastOneCheckpointPerShard(halfShardCount)
+            consumerStats2.waitForAtLeastOneCheckpointPerShard(halfShardCount)
 
             (inspectReceived2, producerKillSwitch, sentFuture)
           }
           val (inspectReceived2, producerKillSwitch, sentFuture) = consumer2ClosureResult
 
-          checkpointLog1.waitForAtLeastOneCheckpointPerShard(initialShardCount)
+          consumerStats1.waitForAtLeastOneCheckpointPerShard(initialShardCount)
           producerKillSwitch.shutdown()
 
           eventually {
@@ -178,12 +178,12 @@ class KinesisSourceTest
           .toMat(producerSink)(Keep.both)
           .run()
 
-        withConsumerSource("singleConsumer") { (consumerSource, checkpointLog) =>
+        withConsumerSource("singleConsumer") { (consumerSource, consumerStats) =>
           val inspectReceived = runKinesisSourceWithInspection(consumerSource)
-          checkpointLog.waitForAtLeastOneCheckpointPerShard(initialShardCount)
+          consumerStats.waitForAtLeastOneCheckpointPerShard(initialShardCount)
 
           KinesisResourceManager.reshardStream(config.regionName, config.streamName, doubleShardCount)
-          checkpointLog.waitForAtLeastOneCheckpointPerShard(doubleShardCount)
+          consumerStats.waitForAtLeastOneCheckpointPerShard(doubleShardCount)
           producerKillSwitch.shutdown()
 
           eventually {
@@ -202,12 +202,12 @@ class KinesisSourceTest
           .toMat(producerSink)(Keep.both)
           .run()
 
-        withConsumerSource("singleConsumer") { (consumerSource, checkpointLog) =>
+        withConsumerSource("singleConsumer") { (consumerSource, consumerStats) =>
           val inspectReceived = runKinesisSourceWithInspection(consumerSource)
-          checkpointLog.waitForAtLeastOneCheckpointPerShard(initialShardCount)
+          consumerStats.waitForAtLeastOneCheckpointPerShard(initialShardCount)
 
           KinesisResourceManager.reshardStream(config.regionName, config.streamName, halfShardCount)
-          checkpointLog.waitForAtLeastOneCheckpointPerShard(halfShardCount)
+          consumerStats.waitForAtLeastOneCheckpointPerShard(halfShardCount)
           producerKillSwitch.shutdown()
 
           eventually {
@@ -221,7 +221,7 @@ class KinesisSourceTest
 
     "getting throttled during checkpoint requests" should {
       "survive and process all the sent messages" taggedAs ThrottledByCheckpoint in { implicit config =>
-        implicit val patienceConfig = PatienceConfig(scaled(Span(240, Seconds)), scaled(Span(2, Seconds)))
+        implicit val patienceConfig = PatienceConfig(scaled(Span(480, Seconds)), scaled(Span(2, Seconds)))
         val targetShardCount = 8
         KinesisResourceManager.reshardStream(config.regionName, config.streamName, targetShardCount)
 
@@ -230,14 +230,14 @@ class KinesisSourceTest
           .toMat(producerSink)(Keep.both)
           .run()
 
-        withConsumerSource("singleConsumer") { (consumerSource, checkpointLog) =>
+        withConsumerSource("singleConsumer") { (consumerSource, consumerStats) =>
           val inspectReceived = runKinesisSourceWithInspection(consumerSource)
 
           eventually(require(inspectReceived().nonEmpty))
           KinesisResourceManager.updateDynamoDbTableWithRate(config.applicationName, requetsPerSecond = 1)
 
-          checkpointLog.waitForAtLeastOneCheckpointPerShard(targetShardCount)
-          checkpointLog.waitForNrOfThrottledCheckpoints(5)
+          consumerStats.waitForAtLeastOneCheckpointPerShard(targetShardCount)
+          consumerStats.waitForNrOfThrottledCheckpoints(5)
           producerKillSwitch.shutdown()
 
           eventually {

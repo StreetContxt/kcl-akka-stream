@@ -1,4 +1,4 @@
-package com.contxt.stream
+package com.contxt.kinesis
 
 import com.amazonaws.PredefinedClientConfigurations
 import com.amazonaws.auth.{ AWSCredentialsProviderChain, DefaultAWSCredentialsProviderChain }

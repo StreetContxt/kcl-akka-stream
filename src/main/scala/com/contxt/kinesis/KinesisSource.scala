@@ -1,10 +1,11 @@
-package com.contxt.stream
+package com.contxt.kinesis
 
 import akka.stream._
 import akka.stream.scaladsl._
 import akka.{ Done, NotUsed }
 import com.amazonaws.services.kinesis.clientlibrary.interfaces.v2.{ IRecordProcessor, IRecordProcessorFactory }
 import com.amazonaws.services.kinesis.clientlibrary.lib.worker.{ KinesisClientLibConfiguration, Worker }
+import com.typesafe.config.{ Config, ConfigFactory }
 import java.lang.Thread.UncaughtExceptionHandler
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.{ Executors, ThreadFactory }
@@ -13,17 +14,22 @@ import scala.concurrent.{ ExecutionContext, Future, Promise }
 import scala.util.Try
 import scala.util.control.NonFatal
 
-/** Kinesis's failover and loadbalancing behaviours do not guarantee mutually exclusive processing of shards.
-  * See [[http://docs.aws.amazon.com/streams/latest/dev/troubleshooting-consumers.html Kinesis Troubleshooting]]
-  * for details as well as an additional list of limitations otherwise not covered by Kinesis documentation.
+/** Kinesis consumer '''does not guarantee mutually exclusive processing of shards''' during failover or load-balancing.
+  * See [[http://docs.aws.amazon.com/streams/latest/dev/troubleshooting-consumers.html Kinesis Troubleshooting Guide]]
+  * for more details.
   *
-  * If you require mutually exclusive processing, or want to avoid spurious errors caused by concurrent processing of
-  * messages with the same key by different nodes, check out Kafka.
+  * - If you require mutually exclusive processing, or want to avoid spurious errors caused by concurrent processing of
+  * messages with the same key by different nodes, [[https://kafka.apache.org/ check out Kafka]].
   *
-  * On the producer side, Kinesis does not guarantee sent message order without excessively slowing things down, see
-  * [[https://github.com/awslabs/amazon-kinesis-producer/issues/23 this ticket]] for more details.
+  * Kinesis producer library '''does not provide message ordering guarantees''' at a reasonable throughput,
+  * see [this ticket](https://github.com/awslabs/amazon-kinesis-producer/issues/23) for more details.
   *
-  * If you require efficient messages transfer while maintaining order, check out Kafka.
+  * - If you require efficient messages transfer while maintaining order, [[https://kafka.apache.org/ check out Kafka]].
+  *
+  * '''KCL license is not compatible with open source licenses!''' See
+  * [this discussion](https://issues.apache.org/jira/browse/LEGAL-198) for more details.
+  *
+  * - If you would like to work with an open-source compatible library, [[https://kafka.apache.org/ check out Kafka]].
   */
 object KinesisSource {
 
@@ -31,22 +37,32 @@ object KinesisSource {
     * when the Kinesis worker has fully shutdown. */
   def apply(
     kclConfig: KinesisClientLibConfiguration,
-    shardCheckpointConfig: ShardCheckpointConfig
+    config: Config = ConfigFactory.load()
   )(implicit materializer: ActorMaterializer): Source[KinesisRecord, Future[Done]] = {
-    KinesisSource(createKclWorker, kclConfig, shardCheckpointConfig, new CheckpointLog)
+    val shardCheckpointConfig = ShardCheckpointConfig(config)
+    val consumerStats = ConsumerStats.getInstance(config)
+    KinesisSource(createKclWorker, kclConfig, shardCheckpointConfig, consumerStats)
   }
 
-  private[stream] def apply(
-    workerFactory: (IRecordProcessorFactory, KinesisClientLibConfiguration) => Worker,
+  def apply(
     kclConfig: KinesisClientLibConfiguration,
     shardCheckpointConfig: ShardCheckpointConfig,
-    checkpointLog: CheckpointLog
+    consumerStats: ConsumerStats
+  )(implicit materializer: ActorMaterializer): Source[KinesisRecord, Future[Done]] = {
+    KinesisSource(createKclWorker, kclConfig, shardCheckpointConfig, consumerStats)
+  }
+
+  private[kinesis] def apply(
+    workerFactory: (IRecordProcessorFactory, KinesisClientLibConfiguration) => ManagedWorker,
+    kclConfig: KinesisClientLibConfiguration,
+    shardCheckpointConfig: ShardCheckpointConfig,
+    consumerStats: ConsumerStats
   )(implicit materializer: ActorMaterializer): Source[KinesisRecord, Future[Done]] = {
     require(
       kclConfig.shouldCallProcessRecordsEvenForEmptyRecordList,
       "`kclConfig.shouldCallProcessRecordsEvenForEmptyRecordList` must be set to `true`."
     )
-    val kinesisStreamId = KinesisStreamId(
+    val kinesisAppId = KinesisAppId(
       kclConfig.getRegionName, kclConfig.getStreamName, kclConfig.getApplicationName
     )
     MergeHub
@@ -55,28 +71,30 @@ object KinesisSource {
       .watchTermination()(Keep.both)
       .mapMaterializedValue { case ((mergeSink, streamKillSwitch), terminationFuture) =>
         val processorFactory = new RecordProcessorFactoryImpl(
-          kinesisStreamId,
+          kinesisAppId,
           streamKillSwitch, terminationFuture,
           mergeSink,
-          shardCheckpointConfig, checkpointLog
+          shardCheckpointConfig, consumerStats
         )
         createAndStartKclWorker(workerFactory, processorFactory, kclConfig, streamKillSwitch, terminationFuture)
       }
       .mapConcat(_.toIndexedSeq)
   }
 
-  private[stream] def createKclWorker(
+  private[kinesis] def createKclWorker(
     recordProcessorFactory: IRecordProcessorFactory,
     kclConfig: KinesisClientLibConfiguration
-  ): Worker = {
-    new Worker.Builder()
-      .recordProcessorFactory(recordProcessorFactory)
-      .config(kclConfig)
-      .build()
+  ): ManagedWorker = {
+    new ManagedKinesisWorker(
+      new Worker.Builder()
+        .recordProcessorFactory(recordProcessorFactory)
+        .config(kclConfig)
+        .build()
+    )
   }
 
   private def createAndStartKclWorker(
-    workerFactory: (IRecordProcessorFactory, KinesisClientLibConfiguration) => Worker,
+    workerFactory: (IRecordProcessorFactory, KinesisClientLibConfiguration) => ManagedWorker,
     recordProcessorFactory: IRecordProcessorFactory,
     kclConfig: KinesisClientLibConfiguration,
     streamKillSwitch: KillSwitch,
@@ -88,7 +106,7 @@ object KinesisSource {
       try {
         val worker = Try(workerFactory(recordProcessorFactory, kclConfig))
         streamTerminationFuture.onComplete { _ =>
-          val workerShutdownFuture = Future(worker.get.startGracefulShutdown().get).map(_ => Done)
+          val workerShutdownFuture = Future(worker.get.shutdownAndWait()).map(_ => Done)
           workerShutdownPromise.completeWith(workerShutdownFuture)
         }
         worker.get.run() // This call hijacks the thread.
@@ -102,13 +120,23 @@ object KinesisSource {
   }
 }
 
-private[stream] class RecordProcessorFactoryImpl(
-  kinesisStreamId: KinesisStreamId,
+private[kinesis] trait ManagedWorker {
+  def run(): Unit
+  def shutdownAndWait(): Unit
+}
+
+private[kinesis] class ManagedKinesisWorker(private val worker: Worker) extends ManagedWorker {
+  def run(): Unit = worker.run()
+  def shutdownAndWait(): Unit = worker.startGracefulShutdown().get
+}
+
+private[kinesis] class RecordProcessorFactoryImpl(
+  kinesisAppId: KinesisAppId,
   streamKillSwitch: KillSwitch,
   terminationFuture: Future[Done],
   mergeSink: Sink[IndexedSeq[KinesisRecord], NotUsed],
   shardCheckpointConfig: ShardCheckpointConfig,
-  checkpointLog: CheckpointLog
+  consumerStats: ConsumerStats
 )(implicit materializer: ActorMaterializer) extends IRecordProcessorFactory {
   override def createProcessor(): IRecordProcessor = {
     val queue = Source
@@ -117,15 +145,15 @@ private[stream] class RecordProcessorFactoryImpl(
       .run()
 
     new RecordProcessorImpl(
-      kinesisStreamId,
+      kinesisAppId,
       streamKillSwitch, terminationFuture,
       queue,
-      shardCheckpointConfig, checkpointLog
+      shardCheckpointConfig, consumerStats
     )
   }
 }
 
-private[stream] object BlockingContext {
+private[kinesis] object BlockingContext {
   private val log = LoggerFactory.getLogger(getClass)
   private val threadId = new AtomicInteger(1)
 

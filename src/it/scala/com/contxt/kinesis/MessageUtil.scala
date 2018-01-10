@@ -1,4 +1,4 @@
-package com.contxt.stream
+package com.contxt.kinesis
 
 object MessageUtil {
 
@@ -17,7 +17,7 @@ object MessageUtil {
       }
   }
 
-  private[stream] def removeReprocessed(messages: IndexedSeq[String]): IndexedSeq[String] = {
+  private[kinesis] def removeReprocessed(messages: IndexedSeq[String]): IndexedSeq[String] = {
     def unwindRetry(sliceCandidate: IndexedSeq[String], from: Int): Int = {
       var i = 0
       while (from + i < messages.size && i < sliceCandidate.size && sliceCandidate(i) == messages(from + i)) i += 1

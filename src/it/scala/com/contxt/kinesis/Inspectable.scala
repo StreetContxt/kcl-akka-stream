@@ -1,9 +1,9 @@
-package com.contxt.stream
+package com.contxt.kinesis
 
 import akka.stream.{ Attributes, Inlet, SinkShape }
 import akka.stream.scaladsl.Sink
 import akka.stream.stage.{ GraphStageLogic, GraphStageWithMaterializedValue, InHandler }
-import com.amazonaws.services.kinesis.clientlibrary.types.ExtendedSequenceNumber
+import com.amazonaws.services.kinesis.clientlibrary.exceptions.ThrottlingException
 import java.util.concurrent.ConcurrentLinkedQueue
 import org.scalatest.concurrent.Eventually._
 import scala.collection.JavaConverters._
@@ -46,12 +46,18 @@ object Inspectable {
   }
 }
 
-private[stream] class InspectableCheckpointLog extends CheckpointLog {
-  import CheckpointLog._
-  private val checkpointEventsByShardKey = new ConcurrentLinkedQueue[(ShardKey, CheckpointEvent)]
+private[kinesis] class InspectableConsumerStats extends NoopConsumerStats {
+  import InspectableConsumerStats._
+  private val checkpointEventsByShardConsumer = new ConcurrentLinkedQueue[(ShardConsumerId, CheckpointEvent)]
 
-  override def checkpointEvent(shardKey: ShardKey, checkpointEvent: CheckpointEvent): Unit = {
-    checkpointEventsByShardKey.add(shardKey -> checkpointEvent)
+  override def checkpointAcked(shardConsumerId: ShardConsumerId): Unit = {
+    checkpointEventsByShardConsumer.add(shardConsumerId -> CheckpointAcked)
+  }
+
+  override def checkpointDelayed(shardConsumerId: ShardConsumerId, e: Throwable): Unit = {
+    e match {
+      case _: ThrottlingException => checkpointEventsByShardConsumer.add(shardConsumerId -> CheckpointThrottled)
+    }
   }
 
   def waitForAtLeastOneCheckpointPerShard(minNumberOfShards: Int)(implicit patienceConfig: PatienceConfig): Unit = {
@@ -61,15 +67,15 @@ private[stream] class InspectableCheckpointLog extends CheckpointLog {
   def waitForNrOfCheckpointsPerShard(
     minNumberOfShards: Int, checkpointCount: Int
   )(implicit patienceConfig: PatienceConfig): Unit = {
-    checkpointEventsByShardKey.clear()
+    checkpointEventsByShardConsumer.clear()
     eventually {
-      val currentCheckpointCounts = checkpointCountByShardKey()
+      val currentCheckpointCounts = checkpointCountByShardConsumer()
       // The first checkpoint may already be in-progress when we inspect acked checkpoints.
       val minCheckpointCountDelta = checkpointCount + 1
-      val shardKeysWithEnoughCheckpoints = currentCheckpointCounts.collect {
-        case (shardKey, count) if count >= minCheckpointCountDelta => shardKey
+      val shardConsumersWithEnoughCheckpoints = currentCheckpointCounts.collect {
+        case (shardConsumer, count) if count >= minCheckpointCountDelta => shardConsumer
       }
-      require(shardKeysWithEnoughCheckpoints.size >= minNumberOfShards)
+      require(shardConsumersWithEnoughCheckpoints.size >= minNumberOfShards)
     }
   }
 
@@ -79,15 +85,21 @@ private[stream] class InspectableCheckpointLog extends CheckpointLog {
     }
   }
 
-  private def checkpointCountByShardKey(): Map[ShardKey, Int] = {
-    checkpointEventsByShardKey.asScala.toIndexedSeq
-      .filter { case (_, event) => event.isInstanceOf[CheckpointAck] }
+  private def checkpointCountByShardConsumer(): Map[ShardConsumerId, Int] = {
+    checkpointEventsByShardConsumer.asScala.toIndexedSeq
+      .filter { case (_, event) => event == CheckpointAcked }
       .groupBy { case (key, _) => key }
       .mapValues(_.size)
   }
 
   private def throttledCheckpointsCount(): Int = {
-    checkpointEventsByShardKey.asScala
+    checkpointEventsByShardConsumer.asScala
       .count { case (_, event) => event == CheckpointThrottled }
   }
+}
+
+object InspectableConsumerStats {
+  sealed trait CheckpointEvent
+  case object CheckpointAcked extends CheckpointEvent
+  case object CheckpointThrottled extends CheckpointEvent
 }

@@ -1,6 +1,6 @@
-package com.contxt.stream
+package com.contxt.kinesis
 
-private[stream] case class KinesisStreamId(
+private[kinesis] case class KinesisAppId(
   regionName: String,
   streamName: String,
   applicationName: String

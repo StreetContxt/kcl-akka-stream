@@ -1,4 +1,4 @@
-package com.contxt.stream
+package com.contxt.kinesis
 
 import akka.util.ByteString
 import com.amazonaws.services.kinesis.clientlibrary.types.UserRecord
