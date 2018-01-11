@@ -21,7 +21,7 @@ class MessageUtilTest extends WordSpec with Matchers {
 
     "removing reprocessed messages" should {
       "keep the original sequence when there is no duplication" in {
-        MessageUtil.removeReprocessed(IndexedSeq(
+        MessageUtil.removeReprocessed("key1", IndexedSeq(
           "m1", "m2", "m3"
         )) shouldEqual IndexedSeq(
           "m1", "m2", "m3"
@@ -30,7 +30,7 @@ class MessageUtilTest extends WordSpec with Matchers {
 
       "detect replay mismatch in the beginning" in {
         an[Exception] should be thrownBy{
-          MessageUtil.removeReprocessed(IndexedSeq(
+          MessageUtil.removeReprocessed("key1", IndexedSeq(
             "m1", "m2", "m1", "m3"
           ))
         }
@@ -38,7 +38,7 @@ class MessageUtilTest extends WordSpec with Matchers {
 
       "detect replay mismatch in the middle" in {
         an[Exception] should be thrownBy{
-          MessageUtil.removeReprocessed(IndexedSeq(
+          MessageUtil.removeReprocessed("key1", IndexedSeq(
             "m1", "m2", "m3", "m2", "m4", "m5"
           ))
         }
@@ -46,7 +46,7 @@ class MessageUtilTest extends WordSpec with Matchers {
 
       "detect replay mismatch at the end" in {
         an[Exception] should be thrownBy{
-          MessageUtil.removeReprocessed(IndexedSeq(
+          MessageUtil.removeReprocessed("key1", IndexedSeq(
             "m1", "m2", "m3", "m2", "m4"
           ))
         }
@@ -54,7 +54,7 @@ class MessageUtilTest extends WordSpec with Matchers {
 
       "detect reordering of messages in the beginning" in {
         an[Exception] should be thrownBy{
-          MessageUtil.removeReprocessed(IndexedSeq(
+          MessageUtil.removeReprocessed("key1", IndexedSeq(
             "m1", "m2", "m2", "m1", "m3"
           ))
         }
@@ -62,7 +62,7 @@ class MessageUtilTest extends WordSpec with Matchers {
 
       "detect reordering of messages in the middle" in {
         an[Exception] should be thrownBy{
-          MessageUtil.removeReprocessed(IndexedSeq(
+          MessageUtil.removeReprocessed("key1", IndexedSeq(
             "m1", "m2", "m3", "m3", "m2", "m4"
           ))
         }
@@ -70,7 +70,7 @@ class MessageUtilTest extends WordSpec with Matchers {
 
       "detect reordering of messages at the end" in {
         an[Exception] should be thrownBy{
-          MessageUtil.removeReprocessed(IndexedSeq(
+          MessageUtil.removeReprocessed("key1", IndexedSeq(
             "m1", "m2", "m3", "m3", "m2"
           ))
         }
@@ -79,7 +79,7 @@ class MessageUtilTest extends WordSpec with Matchers {
 
     "removing single reprocessed message" should {
       "handle repeated leading message" in {
-        MessageUtil.removeReprocessed(IndexedSeq(
+        MessageUtil.removeReprocessed("key1", IndexedSeq(
           "m1", "m1", "m1", "m2", "m3"
         )) shouldEqual IndexedSeq(
           "m1", "m2", "m3"
@@ -87,7 +87,7 @@ class MessageUtilTest extends WordSpec with Matchers {
       }
 
       "handle repeated message in the middle" in {
-        MessageUtil.removeReprocessed(IndexedSeq(
+        MessageUtil.removeReprocessed("key1", IndexedSeq(
           "m1", "m2", "m2", "m2", "m3"
         )) shouldEqual IndexedSeq(
           "m1", "m2", "m3"
@@ -95,7 +95,7 @@ class MessageUtilTest extends WordSpec with Matchers {
       }
 
       "handle repeated trailing message" in {
-        MessageUtil.removeReprocessed(IndexedSeq(
+        MessageUtil.removeReprocessed("key1", IndexedSeq(
           "m1", "m2", "m3", "m3", "m3"
         )) shouldEqual IndexedSeq(
           "m1", "m2", "m3"
@@ -105,7 +105,7 @@ class MessageUtilTest extends WordSpec with Matchers {
 
     "removing a sequence of reprocessed messages" should {
       "handle repeated leading sequence" in {
-        MessageUtil.removeReprocessed(IndexedSeq(
+        MessageUtil.removeReprocessed("key1", IndexedSeq(
           "m1", "m2", "m1", "m2", "m3"
         )) shouldEqual IndexedSeq(
           "m1", "m2", "m3"
@@ -113,7 +113,7 @@ class MessageUtilTest extends WordSpec with Matchers {
       }
 
       "handle repeated sequence in the middle" in {
-        MessageUtil.removeReprocessed(IndexedSeq(
+        MessageUtil.removeReprocessed("key1", IndexedSeq(
           "m1", "m2", "m3", "m2", "m3", "m4"
         )) shouldEqual IndexedSeq(
           "m1", "m2", "m3", "m4"
@@ -121,7 +121,7 @@ class MessageUtilTest extends WordSpec with Matchers {
       }
 
       "handle repeated trailing sequence" in {
-        MessageUtil.removeReprocessed(IndexedSeq(
+        MessageUtil.removeReprocessed("key1", IndexedSeq(
           "m1", "m2", "m3", "m2", "m3"
         )) shouldEqual IndexedSeq(
           "m1", "m2", "m3"
@@ -130,7 +130,7 @@ class MessageUtilTest extends WordSpec with Matchers {
     }
 
     "handle repeated retry sequences" in {
-      MessageUtil.removeReprocessed(IndexedSeq(
+      MessageUtil.removeReprocessed("key1", IndexedSeq(
         "m1", "m2", "m3", "m2", "m2", "m3", "m4"
       )) shouldEqual IndexedSeq(
         "m1", "m2", "m3", "m4"

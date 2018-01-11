@@ -6,7 +6,7 @@ object MessageUtil {
     * Sending a message batch can be retried, as long as the order of messages remains the same.
     * Processing of messages can restart at an earlier checkpoint, as long as the order of messages remains the same. */
   def dedupAndGroupByKey(keyMessagePairs: Seq[(String, String)]): Map[String, IndexedSeq[String]] = {
-    groupByKey(keyMessagePairs).mapValues(removeReprocessed)
+    groupByKey(keyMessagePairs).map { case (key, value) => key -> removeReprocessed(key, value) }
   }
 
   def groupByKey(keyMessagePairs: Seq[(String, String)]): Map[String, IndexedSeq[String]] = {
@@ -17,7 +17,7 @@ object MessageUtil {
       }
   }
 
-  private[kinesis] def removeReprocessed(messages: IndexedSeq[String]): IndexedSeq[String] = {
+  private[kinesis] def removeReprocessed(key: String, messages: IndexedSeq[String]): IndexedSeq[String] = {
     def unwindRetry(sliceCandidate: IndexedSeq[String], from: Int): Int = {
       var i = 0
       while (from + i < messages.size && i < sliceCandidate.size && sliceCandidate(i) == messages(from + i)) i += 1
@@ -40,12 +40,12 @@ object MessageUtil {
       val lastMessage = messages(j)
       if (lastDistinct.isEmpty || lastDistinct.get != lastMessage) {
         val restartedAt = distinct.lastIndexOf(lastMessage)
-        if (restartedAt < lastRestartedAt) throw new UnexpectedMessageSequence(lastMessage, messages)
+        if (restartedAt < lastRestartedAt) throw new UnexpectedMessageSequence(key, lastMessage, messages)
         lastRestartedAt = restartedAt
         val reprocessedSliceCandidate = distinct.slice(restartedAt, i)
         val lastIndexOfRetrySequence = unwindRetries(reprocessedSliceCandidate, j) - 1
         if (lastIndexOfRetrySequence < j || reprocessedSliceCandidate.last != messages(lastIndexOfRetrySequence)) {
-          throw new UnexpectedMessageSequence(lastMessage, messages)
+          throw new UnexpectedMessageSequence(key, lastMessage, messages)
         }
         j = lastIndexOfRetrySequence + 1
       }
@@ -57,6 +57,8 @@ object MessageUtil {
     distinct
   }
 
-  private class UnexpectedMessageSequence(lastMessage: String, messages: IndexedSeq[String])
-    extends Exception(s"Messages starting from `$lastMessage` were processed out of order: ${messages.mkString(",")}")
+  private class UnexpectedMessageSequence(key: String, lastMessage: String, messages: IndexedSeq[String])
+    extends Exception(
+      s"Messages for key `$key` starting from `$lastMessage` were processed out of order: ${messages.mkString(",")}"
+    )
 }

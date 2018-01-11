@@ -76,7 +76,7 @@ private[kinesis] class ShardCheckpointTracker(shardCheckpointConfig: ShardCheckp
 private[kinesis] class RecordProcessorImpl(
   kinesisAppId: KinesisAppId,
   streamKillSwitch: KillSwitch,
-  terminationFuture: Future[Done],
+  streamTerminationFuture: Future[Done],
   queue: SourceQueueWithComplete[IndexedSeq[KinesisRecord]],
   shardCheckpointConfig: ShardCheckpointConfig,
   consumerStats: ConsumerStats
@@ -206,7 +206,7 @@ private[kinesis] class RecordProcessorImpl(
     import scala.concurrent.ExecutionContext.Implicits.global
 
     val allCompletedOrTermination = Future.firstCompletedOf(Seq(
-      shardCheckpointTracker.allInFlightRecordsCompetedFuture, terminationFuture
+      shardCheckpointTracker.allInFlightRecordsCompetedFuture, streamTerminationFuture
     ))
     Try(Await.result(allCompletedOrTermination, Duration.Inf))
   }
@@ -215,7 +215,7 @@ private[kinesis] class RecordProcessorImpl(
     import scala.concurrent.ExecutionContext.Implicits.global
 
     val hasStreamFailed = {
-      if (terminationFuture.isCompleted) Try(Await.result(terminationFuture, 0.seconds)).isFailure
+      if (streamTerminationFuture.isCompleted) Try(Await.result(streamTerminationFuture, 0.seconds)).isFailure
       else false
     }
     if (!hasStreamFailed) Try(Await.result(shardCheckpointTracker.allInFlightRecordsCompetedFuture, waitDuration))
