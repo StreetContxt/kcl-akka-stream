@@ -69,14 +69,14 @@ object KinesisSource {
       .source[IndexedSeq[KinesisRecord]](perProducerBufferSize = 1)
       .viaMat(KillSwitches.single)(Keep.both)
       .watchTermination()(Keep.both)
-      .mapMaterializedValue { case ((mergeSink, streamKillSwitch), terminationFuture) =>
+      .mapMaterializedValue { case ((mergeSink, streamKillSwitch), streamTerminationFuture) =>
         val processorFactory = new RecordProcessorFactoryImpl(
           kinesisAppId,
-          streamKillSwitch, terminationFuture,
+          streamKillSwitch, streamTerminationFuture,
           mergeSink,
           shardCheckpointConfig, consumerStats
         )
-        createAndStartKclWorker(workerFactory, processorFactory, kclConfig, streamKillSwitch, terminationFuture)
+        createAndStartKclWorker(workerFactory, processorFactory, kclConfig, streamKillSwitch, streamTerminationFuture)
       }
       .mapConcat(_.toIndexedSeq)
   }
@@ -133,7 +133,7 @@ private[kinesis] class ManagedKinesisWorker(private val worker: Worker) extends 
 private[kinesis] class RecordProcessorFactoryImpl(
   kinesisAppId: KinesisAppId,
   streamKillSwitch: KillSwitch,
-  terminationFuture: Future[Done],
+  streamTerminationFuture: Future[Done],
   mergeSink: Sink[IndexedSeq[KinesisRecord], NotUsed],
   shardCheckpointConfig: ShardCheckpointConfig,
   consumerStats: ConsumerStats
@@ -146,7 +146,7 @@ private[kinesis] class RecordProcessorFactoryImpl(
 
     new RecordProcessorImpl(
       kinesisAppId,
-      streamKillSwitch, terminationFuture,
+      streamKillSwitch, streamTerminationFuture,
       queue,
       shardCheckpointConfig, consumerStats
     )
