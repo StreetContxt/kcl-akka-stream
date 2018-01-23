@@ -23,6 +23,12 @@ private[kinesis] class ShardCheckpointTracker(shardCheckpointConfig: ShardCheckp
   private var lastCompletedButNotCheckpointed = Option.empty[KinesisRecord]
   private var completedButNotCheckpointedCount = 0
 
+  def nrOfInFlightRecords: Int = inFlightRecords.size
+  def nrOfCompletedUncheckpointedRecords: Int = {
+    popCompletedRecords()
+    completedButNotCheckpointedCount
+  }
+
   def watchForCompletion(records: Iterable[KinesisRecord]): Unit = {
     inFlightRecords ++= records
   }
@@ -99,8 +105,9 @@ private[kinesis] class RecordProcessorImpl(
       val records = processRecordsInput.getRecords.toIndexedSeq
       val kinesisRecords = records.map(KinesisRecord.fromMutableRecord)
       shardCheckpointTracker.watchForCompletion(kinesisRecords)
-      if (kinesisRecords.nonEmpty) blockToEnqueueAndHandleResult(kinesisRecords)
+      recordCheckpointerStats()
       if (shardCheckpointTracker.shouldCheckpoint) checkpointAndHandleErrors(processRecordsInput.getCheckpointer)
+      if (kinesisRecords.nonEmpty) blockToEnqueueAndHandleResult(kinesisRecords)
     }
     catch {
       case NonFatal(e) =>
@@ -200,6 +207,15 @@ private[kinesis] class RecordProcessorImpl(
         log.error(s"Failed to checkpoint $shardConsumerId, failing the streaming...", e)
         streamKillSwitch.abort(e)
     }
+  }
+
+  private def recordCheckpointerStats(): Unit = {
+    consumerStats.recordNrOfInFlightRecords(
+      shardConsumerId, shardCheckpointTracker.nrOfInFlightRecords
+    )
+    consumerStats.recordNrOfCompletedUncheckpointedRecords(
+      shardConsumerId, shardCheckpointTracker.nrOfCompletedUncheckpointedRecords
+    )
   }
 
   private def waitForInFlightRecordsOrTermination(): Unit = {
