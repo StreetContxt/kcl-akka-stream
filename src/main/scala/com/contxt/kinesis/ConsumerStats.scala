@@ -20,7 +20,7 @@ trait ConsumerStats {
   )(closure: => Future[QueueOfferResult]): Future[QueueOfferResult]
 
   def recordNrOfInFlightRecords(shardConsumerId: ShardConsumerId, totalCount: Int): Unit
-  def recordNrOfCompletedUncheckpointedRecords(shardConsumerId: ShardConsumerId, totalCount: Int): Unit
+  def recordNrOfProcessedUncheckpointedRecords(shardConsumerId: ShardConsumerId, totalCount: Int): Unit
 
   def reportInitialization(shardConsumerId: ShardConsumerId): Unit
   def reportShutdown(shardConsumerId: ShardConsumerId, reason: ShutdownReason): Unit
@@ -54,7 +54,7 @@ class NoopConsumerStats extends ConsumerStats {
   )(closure: => Future[QueueOfferResult]): Future[QueueOfferResult] = closure
 
   def recordNrOfInFlightRecords(shardConsumerId: ShardConsumerId, totalCount: Int): Unit = {}
-  def recordNrOfCompletedUncheckpointedRecords(shardConsumerId: ShardConsumerId, totalCount: Int): Unit = {}
+  def recordNrOfProcessedUncheckpointedRecords(shardConsumerId: ShardConsumerId, totalCount: Int): Unit = {}
 
   def reportInitialization(shardConsumerId: ShardConsumerId): Unit = {}
   def reportShutdown(shardConsumerId: ShardConsumerId, reason: ShutdownReason): Unit = {}
