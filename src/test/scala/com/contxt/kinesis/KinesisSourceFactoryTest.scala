@@ -117,7 +117,7 @@ class KinesisSourceFactoryTest
 
   private val shardCheckpointConfig = ShardCheckpointConfig(
     checkpointPeriod = 1.minutes,
-    checkpointAfterCompletingNrOfRecords = 10000,
+    checkpointAfterProcessingNrOfRecords = 10000,
     maxWaitForCompletionOnStreamShutdown = 4.seconds
   )
 
