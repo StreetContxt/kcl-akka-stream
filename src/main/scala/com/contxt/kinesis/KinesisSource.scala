@@ -66,7 +66,7 @@ object KinesisSource {
       kclConfig.getRegionName, kclConfig.getStreamName, kclConfig.getApplicationName
     )
     MergeHub
-      .source[IndexedSeq[KinesisRecord]](perProducerBufferSize = 1)
+      .source[KinesisRecord](perProducerBufferSize = 1)
       .viaMat(KillSwitches.single)(Keep.both)
       .watchTermination()(Keep.both)
       .mapMaterializedValue { case ((mergeSink, streamKillSwitch), streamTerminationFuture) =>
@@ -78,7 +78,6 @@ object KinesisSource {
         )
         createAndStartKclWorker(workerFactory, processorFactory, kclConfig, streamKillSwitch, streamTerminationFuture)
       }
-      .mapConcat(_.toIndexedSeq)
   }
 
   private[kinesis] def createKclWorker(
@@ -134,13 +133,14 @@ private[kinesis] class RecordProcessorFactoryImpl(
   kinesisAppId: KinesisAppId,
   streamKillSwitch: KillSwitch,
   streamTerminationFuture: Future[Done],
-  mergeSink: Sink[IndexedSeq[KinesisRecord], NotUsed],
+  mergeSink: Sink[KinesisRecord, NotUsed],
   shardCheckpointConfig: ShardCheckpointConfig,
   consumerStats: ConsumerStats
 )(implicit materializer: ActorMaterializer) extends IRecordProcessorFactory {
   override def createProcessor(): IRecordProcessor = {
     val queue = Source
       .queue[IndexedSeq[KinesisRecord]](bufferSize = 0, OverflowStrategy.backpressure)
+      .mapConcat(_.toIndexedSeq)
       .to(mergeSink)
       .run()
 

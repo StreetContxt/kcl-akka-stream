@@ -6,6 +6,12 @@ and re-sharding capabilities.
 
 This library is thoroughly tested, but still in early stages.
 
+## Usage
+
+```
+resolvers in ThisBuild += Resolver.bintrayRepo("streetcontxt", "maven")
+libraryDependencies += "com.contxt" %% "kcl-akka-stream" % "1.0.4"
+```
 
 ## Amazon Licensing Restrictions
 **KCL license is not compatible with open source licenses!** See
