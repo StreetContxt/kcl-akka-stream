@@ -15,7 +15,7 @@ val versionPattern = "release-([0-9\\.]*)".r
 version := sys.props
   .get("CIRCLE_TAG")
   .orElse(sys.env.get("CIRCLE_TAG"))
-  .flatMap { 
+  .flatMap {
     case versionPattern(v) => Some(v)
     case _ => None
   }
