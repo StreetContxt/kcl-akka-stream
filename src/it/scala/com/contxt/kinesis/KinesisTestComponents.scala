@@ -1,7 +1,7 @@
 package com.contxt.kinesis
 
 import akka.NotUsed
-import akka.stream.{ ActorMaterializer, KillSwitches, ThrottleMode, UniqueKillSwitch }
+import akka.stream._
 import akka.stream.scaladsl.{ Flow, Keep, Merge, RunnableGraph, Sink, Source }
 import org.scalatest.Tag
 import org.scalatest.concurrent.Eventually._
@@ -14,7 +14,7 @@ trait KinesisTestComponents {
 
   type KeyAndMessage = (String, String)
   protected implicit val patienceConfig: PatienceConfig
-  protected implicit val materializer: ActorMaterializer
+  protected implicit val materializer: Materializer
 
   protected val bootstrapKeyPrefix = "bootstrap"
 
