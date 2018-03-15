@@ -2,7 +2,7 @@ package com.contxt.kinesis
 
 import akka.Done
 import akka.actor.ActorSystem
-import akka.stream.{ ActorMaterializer, KillSwitches, UniqueKillSwitch }
+import akka.stream.{ ActorMaterializer, KillSwitches, Materializer, UniqueKillSwitch }
 import akka.stream.scaladsl.{ Keep, Sink, Source }
 import akka.testkit.TestKit
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain
@@ -19,7 +19,7 @@ class KinesisSourceFactoryTest
   with WordSpecLike with BeforeAndAfterAll with Matchers with Eventually
 {
   override protected def afterAll: Unit = TestKit.shutdownActorSystem(system)
-  protected implicit val materializer: ActorMaterializer = ActorMaterializer()
+  protected implicit val materializer: Materializer = ActorMaterializer()
   private val awaitDuration = 5.seconds
 
   "KinesisSource" when {

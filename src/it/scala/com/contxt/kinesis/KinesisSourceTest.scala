@@ -21,7 +21,7 @@ class KinesisSourceTest
   private val log = LoggerFactory.getLogger(getClass)
   implicit val patienceConfig: PatienceConfig = PatienceConfig(scaled(Span(120, Seconds)), scaled(Span(4, Seconds)))
   override protected def afterAll: Unit = TestKit.shutdownActorSystem(system)
-  protected implicit val materializer: ActorMaterializer = ActorMaterializer()
+  protected implicit val materializer: Materializer = ActorMaterializer()
 
   private val initialShardCount = 4
   private val halfShardCount = initialShardCount / 2

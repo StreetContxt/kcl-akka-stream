@@ -38,7 +38,7 @@ object KinesisSource {
   def apply(
     kclConfig: KinesisClientLibConfiguration,
     config: Config = ConfigFactory.load()
-  )(implicit materializer: ActorMaterializer): Source[KinesisRecord, Future[Done]] = {
+  ): Source[KinesisRecord, Future[Done]] = {
     val shardCheckpointConfig = ShardCheckpointConfig(config)
     val consumerStats = ConsumerStats.getInstance(config)
     KinesisSource(createKclWorker, kclConfig, shardCheckpointConfig, consumerStats)
@@ -48,7 +48,7 @@ object KinesisSource {
     kclConfig: KinesisClientLibConfiguration,
     shardCheckpointConfig: ShardCheckpointConfig,
     consumerStats: ConsumerStats
-  )(implicit materializer: ActorMaterializer): Source[KinesisRecord, Future[Done]] = {
+  ): Source[KinesisRecord, Future[Done]] = {
     KinesisSource(createKclWorker, kclConfig, shardCheckpointConfig, consumerStats)
   }
 
@@ -57,7 +57,7 @@ object KinesisSource {
     kclConfig: KinesisClientLibConfiguration,
     shardCheckpointConfig: ShardCheckpointConfig,
     consumerStats: ConsumerStats
-  )(implicit materializer: ActorMaterializer): Source[KinesisRecord, Future[Done]] = {
+  ): Source[KinesisRecord, Future[Done]] = {
     require(
       kclConfig.shouldCallProcessRecordsEvenForEmptyRecordList,
       "`kclConfig.shouldCallProcessRecordsEvenForEmptyRecordList` must be set to `true`."
@@ -69,14 +69,17 @@ object KinesisSource {
       .source[KinesisRecord](perProducerBufferSize = 1)
       .viaMat(KillSwitches.single)(Keep.both)
       .watchTermination()(Keep.both)
-      .mapMaterializedValue { case ((mergeSink, streamKillSwitch), streamTerminationFuture) =>
-        val processorFactory = new RecordProcessorFactoryImpl(
-          kinesisAppId,
-          streamKillSwitch, streamTerminationFuture,
-          mergeSink,
-          shardCheckpointConfig, consumerStats
-        )
-        createAndStartKclWorker(workerFactory, processorFactory, kclConfig, streamKillSwitch, streamTerminationFuture)
+      .mergeMat(MaterializerAsValue.source)(Keep.both)
+      .mapMaterializedValue { case (((mergeSink, streamKillSwitch), streamTerminationFuture), materializerFuture) =>
+        materializerFuture.flatMap { implicit materializer =>
+          val processorFactory = new RecordProcessorFactoryImpl(
+            kinesisAppId,
+            streamKillSwitch, streamTerminationFuture,
+            mergeSink,
+            shardCheckpointConfig, consumerStats
+          )
+          createAndStartKclWorker(workerFactory, processorFactory, kclConfig, streamKillSwitch, streamTerminationFuture)
+        }(scala.concurrent.ExecutionContext.global)
       }
   }
 
@@ -136,7 +139,7 @@ private[kinesis] class RecordProcessorFactoryImpl(
   mergeSink: Sink[KinesisRecord, NotUsed],
   shardCheckpointConfig: ShardCheckpointConfig,
   consumerStats: ConsumerStats
-)(implicit materializer: ActorMaterializer) extends IRecordProcessorFactory {
+)(implicit materializer: Materializer) extends IRecordProcessorFactory {
   override def createProcessor(): IRecordProcessor = {
     val queue = Source
       .queue[IndexedSeq[KinesisRecord]](bufferSize = 0, OverflowStrategy.backpressure)
