@@ -34,7 +34,7 @@ import scala.util.control.NonFatal
 object KinesisSource {
 
   /** Creates a Source backed by Kinesis Consumer Library, with materialized valued of Future[Done] which completes
-    * when the Kinesis worker has fully shutdown. */
+    * when the stream has terminated and the Kinesis worker has fully shutdown. */
   def apply(
     kclConfig: KinesisClientLibConfiguration,
     config: Config = ConfigFactory.load()
@@ -44,6 +44,8 @@ object KinesisSource {
     KinesisSource(createKclWorker, kclConfig, shardCheckpointConfig, consumerStats)
   }
 
+  /** Creates a Source backed by Kinesis Consumer Library, with materialized valued of Future[Done] which completes
+    * when the stream has terminated and the Kinesis worker has fully shutdown. */
   def apply(
     kclConfig: KinesisClientLibConfiguration,
     shardCheckpointConfig: ShardCheckpointConfig,
