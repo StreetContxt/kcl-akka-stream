@@ -18,9 +18,8 @@ libraryDependencies += "com.contxt" %% "kcl-akka-stream" % "2.0.2"
 ## Usage
 
 Here are two simple examples on how to initialize the Kinesis consumer and listen for string messages.
-- The first example shows how to process Kinesis records in at-least-once fashion
-- The second examples shows how to implement at-most-once processing
 
+The first example shows how to process Kinesis records in at-least-once fashion:
 ```
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
@@ -33,7 +32,7 @@ import scala.concurrent.duration._
 import scala.util.Random
 
 object Main {
-  def atLeastOnceExample(): Unit = {
+  def main(args: Array[String]): Unit = {
     val consumerConfig = new KinesisClientLibConfiguration(
       "atLeastOnceApp",
       "myStream",
@@ -65,8 +64,22 @@ object Main {
     Thread.sleep(10.seconds.toMillis)
     Await.result(system.terminate(), Duration.Inf)
   }
+}
+```
 
-  def atMostOnceExample(): Unit = {
+The second examples shows how to implement at-most-once processing:
+```
+import akka.actor.ActorSystem
+import akka.stream.ActorMaterializer
+import akka.stream.scaladsl.Sink
+import com.amazonaws.auth.AWSCredentialsProviderChain
+import com.amazonaws.services.kinesis.clientlibrary.lib.worker._
+import com.contxt.kinesis.KinesisSource
+import scala.concurrent.Await
+import scala.concurrent.duration._
+
+object Main {
+  def main(args: Array[String]): Unit = {
     val consumerConfig = new KinesisClientLibConfiguration(
       "atMostOnceApp",
       "myStream",
