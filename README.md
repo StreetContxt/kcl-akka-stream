@@ -4,14 +4,115 @@ Akka Streaming Source backed by Kinesis Client Library (KCL).
 This library combines the convenience of Akka Streams with KCL checkpoint management, failover, load-balancing,
 and re-sharding capabilities.
 
-This library is thoroughly tested, but still in early stages.
+This library is thoroughly tested and currently used in production.
 
-## Usage
+
+## Installation
 
 ```
 resolvers in ThisBuild += Resolver.bintrayRepo("streetcontxt", "maven")
-libraryDependencies += "com.contxt" %% "kcl-akka-stream" % "1.0.4"
+libraryDependencies += "com.contxt" %% "kcl-akka-stream" % "2.0.2"
 ```
+
+
+## Usage
+
+Here are two simple examples on how to initialize the Kinesis consumer and listen for string messages.
+- The first example shows how to process Kinesis records in at-least-once fashion
+- The second examples shows how to implement at-most-once processing
+
+```
+import akka.actor.ActorSystem
+import akka.stream.ActorMaterializer
+import akka.stream.scaladsl.Sink
+import com.amazonaws.auth.AWSCredentialsProviderChain
+import com.amazonaws.services.kinesis.clientlibrary.lib.worker._
+import com.contxt.kinesis.KinesisSource
+import scala.concurrent.Await
+import scala.concurrent.duration._
+import scala.util.Random
+
+object Main {
+  def atLeastOnceExample(): Unit = {
+    val consumerConfig = new KinesisClientLibConfiguration(
+      "atLeastOnceApp",
+      "myStream",
+      new AWSCredentialsProviderChain,
+      "kinesisWorker"
+    )
+      .withRegionName("us-east-1")
+      .withCallProcessRecordsEvenForEmptyRecordList(true)
+      .withInitialPositionInStream(InitialPositionInStream.TRIM_HORIZON)
+
+    case class KeyMessage(key: String, message: String, markProcessed: () => Unit)
+
+    val atLeastOnceSource = KinesisSource(consumerConfig)
+      .map { kinesisRecord =>
+        KeyMessage(kinesisRecord.partitionKey, kinesisRecord.data.utf8String, kinesisRecord.markProcessed)
+      }
+      // Records may be processed out of order without affecting checkpointing.
+      .grouped(10).map(batch => Random.shuffle(batch)).mapConcat(identity)
+      .map { message =>
+        // After a record is marked as processed, it is eligible to be checkpointed in DynamoDb.
+        message.markProcessed()
+        message
+      }
+
+    implicit val system = ActorSystem("Main")
+    implicit val materializer = ActorMaterializer
+    atLeastOnceSource.runWith(Sink.foreach(println))
+
+    Thread.sleep(10.seconds.toMillis)
+    Await.result(system.terminate(), Duration.Inf)
+  }
+
+  def atMostOnceExample(): Unit = {
+    val consumerConfig = new KinesisClientLibConfiguration(
+      "atMostOnceApp",
+      "myStream",
+      new AWSCredentialsProviderChain,
+      "kinesisWorker"
+    )
+      .withRegionName("us-east-1")
+      .withCallProcessRecordsEvenForEmptyRecordList(true)
+      .withInitialPositionInStream(InitialPositionInStream.TRIM_HORIZON)
+
+    case class KeyMessage(key: String, message: String)
+
+    val atMostOnceSource = KinesisSource(consumerConfig)
+      .map { kinesisRecord =>
+        // Every record must be marked as processed to allow stream state to be checkpointed in DynamoDb.
+        // Failure to mark at least one record as processed will cause the application to run out of memory.
+        kinesisRecord.markProcessed()
+        kinesisRecord
+      }
+      .map { kinesisRecord =>
+        KeyMessage(kinesisRecord.partitionKey, kinesisRecord.data.utf8String)
+      }
+
+    implicit val system = ActorSystem("Main")
+    implicit val materializer = ActorMaterializer
+    atMostOnceSource.runWith(Sink.foreach(println))
+
+    Thread.sleep(10.seconds.toMillis)
+    Await.result(system.terminate(), Duration.Inf)
+  }
+}
+```
+
+Notice that each Kinesis record must be eventually marked as processed in both at-least-once and
+at-most-once scenarios. This is due to how Kinesis checkpointing is implemented.
+
+A shard in a Kinesis stream is an ordered sequence of records. The shard is checkpointed by storing an offset
+of the last processed record. However, if a record is not processed (for example, because of an exception),
+then no further records after it can be checkpointed.
+
+KinesisSource keeps track of all the uncheckpointed records and their ordering. This means you can process
+records out of order in an asynchronous fashion. Each record must be eventually marked as processed by
+calling `markProcessed()`, or the steam must be terminated with an exception. If the stream continues
+after failing to process a record, and not marking it as processed, then no further records can be checkpointed,
+eventually causing the system to run out of memory.
+
 
 ## Amazon Licensing Restrictions
 **KCL license is not compatible with open source licenses!** See
