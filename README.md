@@ -11,7 +11,7 @@ This library is thoroughly tested and currently used in production.
 
 ```
 resolvers in ThisBuild += Resolver.bintrayRepo("streetcontxt", "maven")
-libraryDependencies += "com.contxt" %% "kcl-akka-stream" % "2.0.2"
+libraryDependencies += "com.contxt" %% "kcl-akka-stream" % "2.0.3"
 ```
 
 
@@ -20,7 +20,7 @@ libraryDependencies += "com.contxt" %% "kcl-akka-stream" % "2.0.2"
 Here are two simple examples on how to initialize the Kinesis consumer and listen for string messages.
 
 The first example shows how to process Kinesis records in at-least-once fashion:
-```
+```scala
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
@@ -47,7 +47,9 @@ object Main {
 
     val atLeastOnceSource = KinesisSource(consumerConfig)
       .map { kinesisRecord =>
-        KeyMessage(kinesisRecord.partitionKey, kinesisRecord.data.utf8String, kinesisRecord.markProcessed)
+        KeyMessage(
+          kinesisRecord.partitionKey, kinesisRecord.data.utf8String, kinesisRecord.markProcessed
+        )
       }
       // Records may be processed out of order without affecting checkpointing.
       .grouped(10).map(batch => Random.shuffle(batch)).mapConcat(identity)
@@ -68,7 +70,7 @@ object Main {
 ```
 
 The second examples shows how to implement at-most-once processing:
-```
+```scala
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
@@ -94,8 +96,9 @@ object Main {
 
     val atMostOnceSource = KinesisSource(consumerConfig)
       .map { kinesisRecord =>
-        // Every record must be marked as processed to allow stream state to be checkpointed in DynamoDb.
-        // Failure to mark at least one record as processed will cause the application to run out of memory.
+        /* Every record must be marked as processed to allow stream state to be checkpointed in
+         * DynamoDb. Failure to mark at least one record as processed will cause the application
+         * to run out of memory. */
         kinesisRecord.markProcessed()
         kinesisRecord
       }
