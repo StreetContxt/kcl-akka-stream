@@ -60,7 +60,7 @@ object Main {
       }
 
     implicit val system = ActorSystem("Main")
-    implicit val materializer = ActorMaterializer
+    implicit val materializer = ActorMaterializer()
     atLeastOnceSource.runWith(Sink.foreach(println))
 
     Thread.sleep(10.seconds.toMillis)
@@ -69,7 +69,7 @@ object Main {
 }
 ```
 
-The second examples shows how to implement at-most-once processing:
+The second examples shows how to implement no-guarantees processing:
 ```scala
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
@@ -83,7 +83,7 @@ import scala.concurrent.duration._
 object Main {
   def main(args: Array[String]): Unit = {
     val consumerConfig = new KinesisClientLibConfiguration(
-      "atMostOnceApp",
+      "noGuaranteesApp",
       "myStream",
       new AWSCredentialsProviderChain,
       "kinesisWorker"
@@ -94,7 +94,7 @@ object Main {
 
     case class KeyMessage(key: String, message: String)
 
-    val atMostOnceSource = KinesisSource(consumerConfig)
+    val noGuaranteesSource = KinesisSource(consumerConfig)
       .map { kinesisRecord =>
         /* Every record must be marked as processed to allow stream state to be checkpointed in
          * DynamoDb. Failure to mark at least one record as processed will cause the application
@@ -107,8 +107,8 @@ object Main {
       }
 
     implicit val system = ActorSystem("Main")
-    implicit val materializer = ActorMaterializer
-    atMostOnceSource.runWith(Sink.foreach(println))
+    implicit val materializer = ActorMaterializer()
+    noGuaranteesSource.runWith(Sink.foreach(println))
 
     Thread.sleep(10.seconds.toMillis)
     Await.result(system.terminate(), Duration.Inf)
@@ -117,7 +117,7 @@ object Main {
 ```
 
 Notice that each Kinesis record must be eventually marked as processed in both at-least-once and
-at-most-once scenarios. This is due to how Kinesis checkpointing is implemented.
+no-guarantees scenarios. This is due to how Kinesis checkpointing is implemented.
 
 A shard in a Kinesis stream is an ordered sequence of records. The shard is checkpointed by storing an offset
 of the last processed record. However, if a record is not processed (for example, because of an exception),
