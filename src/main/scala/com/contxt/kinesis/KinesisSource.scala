@@ -2,15 +2,21 @@ package com.contxt.kinesis
 
 import akka.stream._
 import akka.stream.scaladsl._
-import akka.{ Done, NotUsed }
-import com.amazonaws.services.kinesis.clientlibrary.interfaces.v2.{ IRecordProcessor, IRecordProcessorFactory }
-import com.amazonaws.services.kinesis.clientlibrary.lib.worker.{ KinesisClientLibConfiguration, Worker }
-import com.typesafe.config.{ Config, ConfigFactory }
+import akka.{Done, NotUsed}
+import com.typesafe.config.{Config, ConfigFactory}
 import java.lang.Thread.UncaughtExceptionHandler
 import java.util.concurrent.atomic.AtomicInteger
-import java.util.concurrent.{ Executors, ThreadFactory }
+import java.util.concurrent.{Executors, ThreadFactory}
+
 import org.slf4j.LoggerFactory
-import scala.concurrent.{ ExecutionContext, Future, Promise }
+import software.amazon.awssdk.services.dynamodb.model.BillingMode
+import software.amazon.kinesis.common.ConfigsBuilder
+import software.amazon.kinesis.coordinator.Scheduler
+import software.amazon.kinesis.processor.{ShardRecordProcessor, ShardRecordProcessorFactory}
+import software.amazon.kinesis.retrieval.RetrievalConfig
+import software.amazon.kinesis.retrieval.polling.PollingConfig
+
+import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.util.Try
 import scala.util.control.NonFatal
 
@@ -36,7 +42,7 @@ object KinesisSource {
   /** Creates a Source backed by Kinesis Consumer Library, with materialized valued of Future[Done] which completes
     * when the stream has terminated and the Kinesis worker has fully shutdown. */
   def apply(
-    kclConfig: KinesisClientLibConfiguration,
+    kclConfig: ConsumerConfig,
     config: Config = ConfigFactory.load()
   ): Source[KinesisRecord, Future[Done]] = {
     val shardCheckpointConfig = ShardCheckpointConfig(config)
@@ -47,7 +53,7 @@ object KinesisSource {
   /** Creates a Source backed by Kinesis Consumer Library, with materialized valued of Future[Done] which completes
     * when the stream has terminated and the Kinesis worker has fully shutdown. */
   def apply(
-    kclConfig: KinesisClientLibConfiguration,
+    kclConfig: ConsumerConfig,
     shardCheckpointConfig: ShardCheckpointConfig,
     consumerStats: ConsumerStats
   ): Source[KinesisRecord, Future[Done]] = {
@@ -55,17 +61,13 @@ object KinesisSource {
   }
 
   private[kinesis] def apply(
-    workerFactory: (IRecordProcessorFactory, KinesisClientLibConfiguration) => ManagedWorker,
-    kclConfig: KinesisClientLibConfiguration,
+    workerFactory: (ShardRecordProcessorFactory, ConsumerConfig) => ManagedWorker,
+    kclConfig: ConsumerConfig,
     shardCheckpointConfig: ShardCheckpointConfig,
     consumerStats: ConsumerStats
   ): Source[KinesisRecord, Future[Done]] = {
-    require(
-      kclConfig.shouldCallProcessRecordsEvenForEmptyRecordList,
-      "`kclConfig.shouldCallProcessRecordsEvenForEmptyRecordList` must be set to `true`."
-    )
     val kinesisAppId = KinesisAppId(
-      kclConfig.getRegionName, kclConfig.getStreamName, kclConfig.getApplicationName
+      kclConfig.streamName, kclConfig.appName
     )
     MergeHub
       .source[KinesisRecord](perProducerBufferSize = 1)
@@ -86,21 +88,56 @@ object KinesisSource {
   }
 
   private[kinesis] def createKclWorker(
-    recordProcessorFactory: IRecordProcessorFactory,
-    kclConfig: KinesisClientLibConfiguration
+    recordProcessorFactory: ShardRecordProcessorFactory,
+    config: ConsumerConfig
   ): ManagedWorker = {
+    val configsBuilder =
+      new ConfigsBuilder(
+        config.streamName,
+        config.appName,
+        config.kinesisClient,
+        config.dynamoClient,
+        config.cloudwatchClient,
+        config.workerId,
+        recordProcessorFactory
+      )
+
+    val checkpointConfig = configsBuilder.checkpointConfig()
+    val coordinatorConfig = config.coordinatorConfig.getOrElse(configsBuilder.coordinatorConfig())
+    val leaseManagementConfig = config.leaseManagementConfig.getOrElse(configsBuilder.leaseManagementConfig().billingMode(BillingMode.PAY_PER_REQUEST))
+    val lifecycleConfig = configsBuilder.lifecycleConfig()
+    val metricsConfig = config.metricsConfig.getOrElse(configsBuilder.metricsConfig())
+    val processorConfig = configsBuilder.processorConfig().callProcessRecordsEvenForEmptyRecordList(true)
+    val retrievalConfig =
+      config
+        .retrievalConfig
+        .getOrElse {
+          new RetrievalConfig(
+            config.kinesisClient,
+            config.streamName,
+            config.appName
+          ).retrievalSpecificConfig(
+            new PollingConfig(config.streamName, config.kinesisClient)
+          ).initialPositionInStreamExtended(config.initialPositionInStreamExtended)
+        }
+
     new ManagedKinesisWorker(
-      new Worker.Builder()
-        .recordProcessorFactory(recordProcessorFactory)
-        .config(kclConfig)
-        .build()
+      new Scheduler(
+        checkpointConfig,
+        coordinatorConfig,
+        leaseManagementConfig,
+        lifecycleConfig,
+        metricsConfig,
+        processorConfig,
+        retrievalConfig
+      )
     )
   }
 
   private def createAndStartKclWorker(
-    workerFactory: (IRecordProcessorFactory, KinesisClientLibConfiguration) => ManagedWorker,
-    recordProcessorFactory: IRecordProcessorFactory,
-    kclConfig: KinesisClientLibConfiguration,
+    workerFactory: (ShardRecordProcessorFactory, ConsumerConfig) => ManagedWorker,
+    recordProcessorFactory: ShardRecordProcessorFactory,
+    kclConfig: ConsumerConfig,
     streamKillSwitch: KillSwitch,
     streamTerminationFuture: Future[Done]
   ): Future[Done] = {
@@ -129,7 +166,7 @@ private[kinesis] trait ManagedWorker {
   def shutdownAndWait(): Unit
 }
 
-private[kinesis] class ManagedKinesisWorker(private val worker: Worker) extends ManagedWorker {
+private[kinesis] class ManagedKinesisWorker(private val worker: Scheduler) extends ManagedWorker {
   def run(): Unit = worker.run()
   def shutdownAndWait(): Unit = worker.startGracefulShutdown().get
 }
@@ -141,8 +178,8 @@ private[kinesis] class RecordProcessorFactoryImpl(
   mergeSink: Sink[KinesisRecord, NotUsed],
   shardCheckpointConfig: ShardCheckpointConfig,
   consumerStats: ConsumerStats
-)(implicit materializer: Materializer) extends IRecordProcessorFactory {
-  override def createProcessor(): IRecordProcessor = {
+)(implicit materializer: Materializer) extends ShardRecordProcessorFactory {
+  override def shardRecordProcessor(): ShardRecordProcessor = {
     val queue = Source
       .queue[IndexedSeq[KinesisRecord]](bufferSize = 0, OverflowStrategy.backpressure)
       .mapConcat(_.toIndexedSeq)

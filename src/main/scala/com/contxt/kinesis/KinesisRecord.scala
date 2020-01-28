@@ -2,32 +2,27 @@ package com.contxt.kinesis
 
 import akka.Done
 import akka.util.ByteString
-import com.amazonaws.services.kinesis.clientlibrary.types.UserRecord
-import com.amazonaws.services.kinesis.model.Record
 import java.time.Instant
-import scala.concurrent.{ Future, Promise }
+
+import software.amazon.awssdk.services.kinesis.model.EncryptionType
+import software.amazon.kinesis.retrieval.KinesisClientRecord
+
+import scala.concurrent.{Future, Promise}
 
 case class KinesisRecord(
-  /** See [[com.amazonaws.services.kinesis.model.Record.getData]] for more details. */
   data: ByteString,
 
-  /** See [[com.amazonaws.services.kinesis.model.Record.getPartitionKey]] for more details. */
   partitionKey: String,
 
-  /** See [[com.amazonaws.services.kinesis.clientlibrary.types.UserRecord.getExplicitHashKey]] for more details. */
   explicitHashKey: Option[String],
 
-  /** See [[com.amazonaws.services.kinesis.model.Record.getSequenceNumber]] for more details. */
   sequenceNumber: String,
 
-  /** See [[com.amazonaws.services.kinesis.clientlibrary.types.UserRecord.getSubSequenceNumber]] for more details. */
   subSequenceNumber: Option[Long],
 
-  /** See [[com.amazonaws.services.kinesis.model.Record.getApproximateArrivalTimestamp]] for more details. */
   approximateArrivalTimestamp: Instant,
 
-  /** See [[com.amazonaws.services.kinesis.model.Record.getEncryptionType]] for more details. */
-  encryptionType: String
+  encryptionType: EncryptionType
 ) {
   private val completionPromise = Promise[Done]
 
@@ -55,19 +50,15 @@ case class KinesisRecord(
 }
 
 object KinesisRecord {
-  def fromMutableRecord(record: Record): KinesisRecord = {
-    val (subSequenceNumber, explicitHashKey) = record match {
-      case userRecord: UserRecord => (Some(userRecord.getSubSequenceNumber), Option(userRecord.getExplicitHashKey))
-      case _ => (None, None)
-    }
+  def fromMutableRecord(record: KinesisClientRecord): KinesisRecord = {
     KinesisRecord(
-      data = ByteString(record.getData),
-      partitionKey = record.getPartitionKey,
-      explicitHashKey = explicitHashKey,
-      sequenceNumber = record.getSequenceNumber,
-      subSequenceNumber = subSequenceNumber,
-      approximateArrivalTimestamp = record.getApproximateArrivalTimestamp.toInstant,
-      encryptionType = Option(record.getEncryptionType).getOrElse("NONE")
+      data = ByteString(record.data()),
+      partitionKey = record.partitionKey(),
+      explicitHashKey = Some(record.explicitHashKey()),
+      sequenceNumber = record.sequenceNumber(),
+      subSequenceNumber = Some(record.subSequenceNumber()),
+      approximateArrivalTimestamp = record.approximateArrivalTimestamp(),
+      encryptionType = record.encryptionType()
     )
   }
 }

@@ -1,9 +1,10 @@
 package com.contxt.kinesis
 
 import akka.stream.QueueOfferResult
-import com.amazonaws.services.kinesis.clientlibrary.lib.worker.ShutdownReason
 import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
+import software.amazon.kinesis.lifecycle.ShutdownReason
+
 import scala.concurrent.Future
 import scala.util.control.NonFatal
 
