@@ -5,8 +5,12 @@ import akka.actor.ActorSystem
 import akka.stream.scaladsl.{Keep, Sink, Source}
 import akka.stream.{KillSwitches, UniqueKillSwitch}
 import akka.testkit.TestKit
+import org.scalamock.scalatest.MockFactory
 import org.scalatest.concurrent.Eventually
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
+import software.amazon.awssdk.services.cloudwatch.CloudWatchAsyncClient
+import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient
+import software.amazon.awssdk.services.kinesis.KinesisAsyncClient
 import software.amazon.kinesis.processor.ShardRecordProcessorFactory
 
 import scala.concurrent.duration._
@@ -15,7 +19,7 @@ import scala.util.{Failure, Try}
 
 class KinesisSourceFactoryTest
   extends TestKit(ActorSystem("TestSystem"))
-    with WordSpecLike with BeforeAndAfterAll with Matchers with Eventually {
+    with WordSpecLike with BeforeAndAfterAll with Matchers with Eventually with MockFactory{
   override protected def afterAll: Unit = TestKit.shutdownActorSystem(system)
 
   protected implicit val actorSystem: ActorSystem = ActorSystem("MainActorSystem")
@@ -111,7 +115,15 @@ class KinesisSourceFactoryTest
     maxWaitForCompletionOnStreamShutdown = 4.seconds
   )
 
-  private def clientConfig = ConsumerConfig("streamName1", "applicationName1").withWorkerId("workerId")
+  private def clientConfig =
+    new ConsumerConfig(
+      streamName = "streamName1",
+      appName = "applicationName1",
+      workerId = "workerId",
+      kinesisClient = mock[KinesisAsyncClient],
+      dynamoClient = mock[DynamoDbAsyncClient],
+      cloudwatchClient = mock[CloudWatchAsyncClient]
+    )
 
   class MockWorker extends ManagedWorker {
     val runControl: Promise[Done] = Promise[Done]()
