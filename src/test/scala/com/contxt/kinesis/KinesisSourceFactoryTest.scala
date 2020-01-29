@@ -2,41 +2,31 @@ package com.contxt.kinesis
 
 import akka.Done
 import akka.actor.ActorSystem
-import akka.stream.{ ActorMaterializer, KillSwitches, Materializer, UniqueKillSwitch }
-import akka.stream.scaladsl.{ Keep, Sink, Source }
+import akka.stream.scaladsl.{Keep, Sink, Source}
+import akka.stream.{KillSwitches, UniqueKillSwitch}
 import akka.testkit.TestKit
-import com.amazonaws.auth.DefaultAWSCredentialsProviderChain
-import com.amazonaws.services.kinesis.clientlibrary.interfaces.v2.IRecordProcessorFactory
-import com.amazonaws.services.kinesis.clientlibrary.lib.worker.KinesisClientLibConfiguration
 import org.scalatest.concurrent.Eventually
-import org.scalatest.{ BeforeAndAfterAll, Matchers, WordSpecLike }
-import scala.concurrent.{ Await, Future, Promise }
+import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
+import software.amazon.kinesis.processor.ShardRecordProcessorFactory
+
 import scala.concurrent.duration._
-import scala.util.{ Failure, Try }
+import scala.concurrent.{Await, Future, Promise}
+import scala.util.{Failure, Try}
 
 class KinesisSourceFactoryTest
   extends TestKit(ActorSystem("TestSystem"))
-  with WordSpecLike with BeforeAndAfterAll with Matchers with Eventually
-{
+    with WordSpecLike with BeforeAndAfterAll with Matchers with Eventually {
   override protected def afterAll: Unit = TestKit.shutdownActorSystem(system)
-  protected implicit val materializer: Materializer = ActorMaterializer()
+
+  protected implicit val actorSystem: ActorSystem = ActorSystem("MainActorSystem")
   private val awaitDuration = 5.seconds
 
   "KinesisSource" when {
-    "creating a stream" should {
-      "require `CallProcessRecordsEvenForEmptyRecordList` to be true" in {
-        an[IllegalArgumentException] shouldBe thrownBy {
-          val badConfig = clientConfig.withCallProcessRecordsEvenForEmptyRecordList(false)
-          KinesisSource(badConfig)
-        }
-        KinesisSource(clientConfig) // Check that config is good otherwise.
-      }
-    }
 
     "creating a worker" should {
       "fail stream if worker creation fails" in {
         val exception = new RuntimeException("TestException1")
-        val workerFactory: (IRecordProcessorFactory, KinesisClientLibConfiguration) => ManagedWorker = { (_, _) =>
+        val workerFactory: (ShardRecordProcessorFactory, ConsumerConfig) => ManagedWorker = { (_, _) =>
           throw exception
         }
         val source = KinesisSource(workerFactory, clientConfig, shardCheckpointConfig, new NoopConsumerStats)
@@ -109,7 +99,7 @@ class KinesisSourceFactoryTest
   }
 
   private def mkSource(mockWorker: MockWorker): Source[KinesisRecord, Future[Done]] = {
-    val workerFactory: (IRecordProcessorFactory, KinesisClientLibConfiguration) => ManagedWorker = { (_, _) =>
+    val workerFactory: (ShardRecordProcessorFactory, ConsumerConfig) => ManagedWorker = { (_, _) =>
       mockWorker
     }
     KinesisSource(workerFactory, clientConfig, shardCheckpointConfig, new NoopConsumerStats)
@@ -121,20 +111,15 @@ class KinesisSourceFactoryTest
     maxWaitForCompletionOnStreamShutdown = 4.seconds
   )
 
-  private def clientConfig = {
-    new KinesisClientLibConfiguration(
-      "applicationName1",
-      "streamName1",
-      new DefaultAWSCredentialsProviderChain(),
-      "workerId1"
-    )
-      .withCallProcessRecordsEvenForEmptyRecordList(true)
-  }
+  private def clientConfig = ConsumerConfig("streamName1", "applicationName1").withWorkerId("workerId")
 
   class MockWorker extends ManagedWorker {
     val runControl: Promise[Done] = Promise[Done]()
     val shutdownControl: Promise[Done] = Promise[Done]()
+
     override def run(): Unit = Await.result(runControl.future, Duration.Inf)
+
     override def shutdownAndWait(): Unit = Await.result(shutdownControl.future, Duration.Inf)
   }
+
 }

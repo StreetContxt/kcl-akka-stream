@@ -2,10 +2,12 @@ package com.contxt.kinesis
 
 import akka.Done
 import akka.util.ByteString
-import com.amazonaws.services.kinesis.model.EncryptionType
 import java.time.Instant
-import org.scalatest.{ Matchers, WordSpec }
-import scala.concurrent.{ Await, TimeoutException }
+
+import org.scalatest.{Matchers, WordSpec}
+import software.amazon.awssdk.services.kinesis.model.EncryptionType
+
+import scala.concurrent.{Await, TimeoutException}
 import scala.concurrent.duration._
 
 class ShardCheckpointTrackerTest extends WordSpec with Matchers {
@@ -15,14 +17,14 @@ class ShardCheckpointTrackerTest extends WordSpec with Matchers {
     "deciding whether to checkpoint" should {
       "not checkpoint prematurely" in {
         val tracker = mkCheckpointTracker()
-        val records = mkRecrods(1)
+        val records = mkRecords(1)
         tracker.watchForCompletion(records)
         tracker.shouldCheckpoint shouldBe false
       }
 
       "checkpoint on target record count" in {
         val tracker = mkCheckpointTracker()
-        val records = mkRecrods(checkpoinConfig.checkpointAfterProcessingNrOfRecords)
+        val records = mkRecords(checkpointConfig.checkpointAfterProcessingNrOfRecords)
         tracker.watchForCompletion(records)
         records.foreach(_.markProcessed())
         tracker.shouldCheckpoint shouldBe true
@@ -30,9 +32,9 @@ class ShardCheckpointTrackerTest extends WordSpec with Matchers {
 
       "checkpoint after configure period" in {
         val tracker = mkCheckpointTracker()
-        val records = mkRecrods(1)
+        val records = mkRecords(1)
         tracker.watchForCompletion(records)
-        Thread.sleep(checkpoinConfig.checkpointPeriod.toMillis)
+        Thread.sleep(checkpointConfig.checkpointPeriod.toMillis)
         tracker.shouldCheckpoint shouldBe true
       }
     }
@@ -40,7 +42,7 @@ class ShardCheckpointTrackerTest extends WordSpec with Matchers {
     "checkpointing last processed record" should {
       "do nothing if no processed records" in {
         val tracker = mkCheckpointTracker()
-        val records = mkRecrods(1)
+        val records = mkRecords(1)
         tracker.watchForCompletion(records)
 
         var checkpointedRecord = Option.empty[KinesisRecord]
@@ -52,7 +54,7 @@ class ShardCheckpointTrackerTest extends WordSpec with Matchers {
 
       "checkpoint the last processed record in a sequence" in {
         val tracker = mkCheckpointTracker()
-        val records = mkRecrods(3)
+        val records = mkRecords(3)
         tracker.watchForCompletion(records)
         records.take(2).foreach(_.markProcessed())
 
@@ -65,7 +67,7 @@ class ShardCheckpointTrackerTest extends WordSpec with Matchers {
 
       "checkpoint the last record before a completion gap" in {
         val tracker = mkCheckpointTracker()
-        val records = mkRecrods(4)
+        val records = mkRecords(4)
         tracker.watchForCompletion(records)
         Seq(records(0), records(1), records(3)).foreach(_.markProcessed())
 
@@ -78,7 +80,7 @@ class ShardCheckpointTrackerTest extends WordSpec with Matchers {
 
       "rethrow an exception and clear checkpoint triggers" in {
         val tracker = mkCheckpointTracker()
-        val records = mkRecrods(2)
+        val records = mkRecords(2)
         tracker.watchForCompletion(records)
         records.foreach(_.markProcessed())
 
@@ -93,7 +95,7 @@ class ShardCheckpointTrackerTest extends WordSpec with Matchers {
 
       "rethrow an exception and keep the last processed record" in {
         val tracker = mkCheckpointTracker()
-        val records = mkRecrods(2)
+        val records = mkRecords(2)
         tracker.watchForCompletion(records)
         records.foreach(_.markProcessed())
 
@@ -117,7 +119,7 @@ class ShardCheckpointTrackerTest extends WordSpec with Matchers {
     "checking for in flight record completion" should {
       "return true if all records are processed" in {
         val tracker = mkCheckpointTracker()
-        val records = mkRecrods(3)
+        val records = mkRecords(3)
         tracker.watchForCompletion(records)
         records.foreach(_.markProcessed())
         tracker.allInFlightRecordsProcessed shouldBe true
@@ -125,7 +127,7 @@ class ShardCheckpointTrackerTest extends WordSpec with Matchers {
 
       "return false if at least one record is not processed" in {
         val tracker = mkCheckpointTracker()
-        val records = mkRecrods(3)
+        val records = mkRecords(3)
         tracker.watchForCompletion(records)
         Seq(records(0), records(2)).foreach(_.markProcessed())
         tracker.allInFlightRecordsProcessed shouldBe false
@@ -135,7 +137,7 @@ class ShardCheckpointTrackerTest extends WordSpec with Matchers {
     "creating in flight record completion future" should {
       "return a future that completes when all the records are processed" in {
         val tracker = mkCheckpointTracker()
-        val records = mkRecrods(3)
+        val records = mkRecords(3)
         tracker.watchForCompletion(records)
         records.foreach(_.markProcessed())
         import scala.concurrent.ExecutionContext.Implicits.global
@@ -144,7 +146,7 @@ class ShardCheckpointTrackerTest extends WordSpec with Matchers {
 
       "return a future that wont complete as long as a record remains unprocessed" in {
         val tracker = mkCheckpointTracker()
-        val records = mkRecrods(3)
+        val records = mkRecords(3)
         tracker.watchForCompletion(records)
         Seq(records(0), records(2)).foreach(_.markProcessed())
         a[TimeoutException] shouldBe thrownBy {
@@ -157,21 +159,21 @@ class ShardCheckpointTrackerTest extends WordSpec with Matchers {
 
   private class TestException extends RuntimeException("Test Exception")
 
-  private val checkpoinConfig = ShardCheckpointConfig(
+  private val checkpointConfig = ShardCheckpointConfig(
     checkpointPeriod = 2.second,
     checkpointAfterProcessingNrOfRecords = 2,
     maxWaitForCompletionOnStreamShutdown = 2.second
   )
-  private def mkCheckpointTracker() = new ShardCheckpointTracker(checkpoinConfig)
+  private def mkCheckpointTracker() = new ShardCheckpointTracker(checkpointConfig)
 
   private def mkRecord() = KinesisRecord(
     ByteString("testData".getBytes("UTF-8")),
     partitionKey = "testPartitionKey",
     sequenceNumber = "123",
     approximateArrivalTimestamp = Instant.now(),
-    encryptionType = EncryptionType.NONE.toString,
+    encryptionType = Option(EncryptionType.NONE),
     explicitHashKey = None,
     subSequenceNumber = None
   )
-  private def mkRecrods(n: Int) = for (i <- 0 until n) yield mkRecord()
+  private def mkRecords(n: Int) = for (i <- 0 until n) yield mkRecord()
 }

@@ -1,12 +1,12 @@
 package com.contxt.kinesis
 
-import akka.util.ByteString
-import com.amazonaws.services.kinesis.clientlibrary.types.UserRecord
-import com.amazonaws.services.kinesis.model.{ EncryptionType, Record }
 import java.nio.ByteBuffer
 import java.time.Instant
-import java.util.Date
-import org.scalatest.{ Matchers, WordSpec }
+
+import akka.util.ByteString
+import org.scalatest.{Matchers, WordSpec}
+import software.amazon.awssdk.services.kinesis.model.EncryptionType
+import software.amazon.kinesis.retrieval.KinesisClientRecord
 
 class KinesisRecordTest extends WordSpec with Matchers {
   "KinesisRecord" when {
@@ -16,23 +16,24 @@ class KinesisRecordTest extends WordSpec with Matchers {
         val partitionKey = "testPartitionKey"
         val sequenceNumber = "12345"
         val timestamp = Instant.now()
-        val encryptionType = EncryptionType.KMS.toString
+        val encryptionType = EncryptionType.KMS
 
-        val kinesisRecord = KinesisRecord.fromMutableRecord(new Record()
-          .withData(ByteBuffer.wrap(data))
-          .withPartitionKey(partitionKey)
-          .withSequenceNumber(sequenceNumber)
-          .withApproximateArrivalTimestamp(Date.from(timestamp))
-          .withEncryptionType(encryptionType)
+        val kinesisRecord = KinesisRecord.fromMutableRecord(KinesisClientRecord.builder()
+          .data(ByteBuffer.wrap(data))
+          .partitionKey(partitionKey)
+          .sequenceNumber(sequenceNumber)
+          .approximateArrivalTimestamp(timestamp)
+          .encryptionType(encryptionType)
+          .build()
         )
         val expected = KinesisRecord(
           ByteString(data),
           partitionKey = partitionKey,
           sequenceNumber = sequenceNumber,
           approximateArrivalTimestamp = timestamp,
-          encryptionType = encryptionType,
+          encryptionType = Some(encryptionType),
           explicitHashKey = None,
-          subSequenceNumber = None
+          subSequenceNumber = Some(0L)
         )
 
         kinesisRecord shouldEqual expected
@@ -47,19 +48,20 @@ class KinesisRecordTest extends WordSpec with Matchers {
         val sequenceNumber = "12345"
         val subSequenceNumber = 123L
         val timestamp = Instant.now()
-        val encryptionType = EncryptionType.NONE.toString
 
-        val userRecord = new UserRecord(new Record()
-          .withData(ByteBuffer.wrap(data))
-          .withPartitionKey(partitionKey)
-          .withSequenceNumber(sequenceNumber)
-          .withApproximateArrivalTimestamp(Date.from(timestamp))
-        )
+        val userRecord = KinesisClientRecord.builder()
+          .data(ByteBuffer.wrap(data))
+          .partitionKey(partitionKey)
+          .sequenceNumber(sequenceNumber)
+          .approximateArrivalTimestamp(timestamp)
+          .build()
+
         def setUserRecordField(fieldName: String, value: Any): Unit = {
           val field = userRecord.getClass.getDeclaredField(fieldName)
           field.setAccessible(true)
           field.set(userRecord, value)
         }
+
         setUserRecordField("subSequenceNumber", subSequenceNumber)
         setUserRecordField("explicitHashKey", explicitHashKey)
 
@@ -72,7 +74,7 @@ class KinesisRecordTest extends WordSpec with Matchers {
           sequenceNumber = sequenceNumber,
           subSequenceNumber = Some(subSequenceNumber),
           approximateArrivalTimestamp = timestamp,
-          encryptionType = encryptionType
+          encryptionType = None
         )
 
         kinesisRecord shouldEqual expected

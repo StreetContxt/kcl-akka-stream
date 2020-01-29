@@ -1,13 +1,13 @@
 package com.contxt.kinesis
 
-import akka.stream._
-import akka.stream.scaladsl._
-import akka.{Done, NotUsed}
-import com.typesafe.config.{Config, ConfigFactory}
 import java.lang.Thread.UncaughtExceptionHandler
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.{Executors, ThreadFactory}
 
+import akka.stream.scaladsl.{Keep, MergeHub, Sink, Source}
+import akka.stream.{KillSwitch, KillSwitches, Materializer, OverflowStrategy}
+import akka.{Done, NotUsed}
+import com.typesafe.config.{Config, ConfigFactory}
 import org.slf4j.LoggerFactory
 import software.amazon.awssdk.services.dynamodb.model.BillingMode
 import software.amazon.kinesis.common.ConfigsBuilder
@@ -41,10 +41,9 @@ object KinesisSource {
 
   /** Creates a Source backed by Kinesis Consumer Library, with materialized valued of Future[Done] which completes
     * when the stream has terminated and the Kinesis worker has fully shutdown. */
-  def apply(
-    kclConfig: ConsumerConfig,
-    config: Config = ConfigFactory.load()
-  ): Source[KinesisRecord, Future[Done]] = {
+  def apply(kclConfig: ConsumerConfig,
+            config: Config = ConfigFactory.load()
+           ): Source[KinesisRecord, Future[Done]] = {
     val shardCheckpointConfig = ShardCheckpointConfig(config)
     val consumerStats = ConsumerStats.getInstance(config)
     KinesisSource(createKclWorker, kclConfig, shardCheckpointConfig, consumerStats)
@@ -53,19 +52,18 @@ object KinesisSource {
   /** Creates a Source backed by Kinesis Consumer Library, with materialized valued of Future[Done] which completes
     * when the stream has terminated and the Kinesis worker has fully shutdown. */
   def apply(
-    kclConfig: ConsumerConfig,
-    shardCheckpointConfig: ShardCheckpointConfig,
-    consumerStats: ConsumerStats
-  ): Source[KinesisRecord, Future[Done]] = {
+             kclConfig: ConsumerConfig,
+             shardCheckpointConfig: ShardCheckpointConfig,
+             consumerStats: ConsumerStats
+           ): Source[KinesisRecord, Future[Done]] = {
     KinesisSource(createKclWorker, kclConfig, shardCheckpointConfig, consumerStats)
   }
 
-  private[kinesis] def apply(
-    workerFactory: (ShardRecordProcessorFactory, ConsumerConfig) => ManagedWorker,
-    kclConfig: ConsumerConfig,
-    shardCheckpointConfig: ShardCheckpointConfig,
-    consumerStats: ConsumerStats
-  ): Source[KinesisRecord, Future[Done]] = {
+  private[kinesis] def apply(workerFactory: (ShardRecordProcessorFactory, ConsumerConfig) => ManagedWorker,
+                             kclConfig: ConsumerConfig,
+                             shardCheckpointConfig: ShardCheckpointConfig,
+                             consumerStats: ConsumerStats
+                            ): Source[KinesisRecord, Future[Done]] = {
     val kinesisAppId = KinesisAppId(
       kclConfig.streamName, kclConfig.appName
     )
@@ -87,10 +85,9 @@ object KinesisSource {
       }
   }
 
-  private[kinesis] def createKclWorker(
-    recordProcessorFactory: ShardRecordProcessorFactory,
-    config: ConsumerConfig
-  ): ManagedWorker = {
+  private[kinesis] def createKclWorker(recordProcessorFactory: ShardRecordProcessorFactory,
+                                       config: ConsumerConfig
+                                      ): ManagedWorker = {
     val configsBuilder =
       new ConfigsBuilder(
         config.streamName,
@@ -134,13 +131,12 @@ object KinesisSource {
     )
   }
 
-  private def createAndStartKclWorker(
-    workerFactory: (ShardRecordProcessorFactory, ConsumerConfig) => ManagedWorker,
-    recordProcessorFactory: ShardRecordProcessorFactory,
-    kclConfig: ConsumerConfig,
-    streamKillSwitch: KillSwitch,
-    streamTerminationFuture: Future[Done]
-  ): Future[Done] = {
+  private def createAndStartKclWorker(workerFactory: (ShardRecordProcessorFactory, ConsumerConfig) => ManagedWorker,
+                                      recordProcessorFactory: ShardRecordProcessorFactory,
+                                      kclConfig: ConsumerConfig,
+                                      streamKillSwitch: KillSwitch,
+                                      streamTerminationFuture: Future[Done]
+                                     ): Future[Done] = {
     implicit val blockingContext: ExecutionContext = BlockingContext.KinesisWorkersSharedContext
     val workerShutdownPromise = Promise[Done]
     Future {
@@ -163,22 +159,24 @@ object KinesisSource {
 
 private[kinesis] trait ManagedWorker {
   def run(): Unit
+
   def shutdownAndWait(): Unit
 }
 
 private[kinesis] class ManagedKinesisWorker(private val worker: Scheduler) extends ManagedWorker {
   def run(): Unit = worker.run()
+
   def shutdownAndWait(): Unit = worker.startGracefulShutdown().get
 }
 
 private[kinesis] class RecordProcessorFactoryImpl(
-  kinesisAppId: KinesisAppId,
-  streamKillSwitch: KillSwitch,
-  streamTerminationFuture: Future[Done],
-  mergeSink: Sink[KinesisRecord, NotUsed],
-  shardCheckpointConfig: ShardCheckpointConfig,
-  consumerStats: ConsumerStats
-)(implicit materializer: Materializer) extends ShardRecordProcessorFactory {
+                                                   kinesisAppId: KinesisAppId,
+                                                   streamKillSwitch: KillSwitch,
+                                                   streamTerminationFuture: Future[Done],
+                                                   mergeSink: Sink[KinesisRecord, NotUsed],
+                                                   shardCheckpointConfig: ShardCheckpointConfig,
+                                                   consumerStats: ConsumerStats
+                                                 )(implicit materializer: Materializer) extends ShardRecordProcessorFactory {
   override def shardRecordProcessor(): ShardRecordProcessor = {
     val queue = Source
       .queue[IndexedSeq[KinesisRecord]](bufferSize = 0, OverflowStrategy.backpressure)
@@ -199,7 +197,7 @@ private[kinesis] object BlockingContext {
   private val log = LoggerFactory.getLogger(getClass)
   private val threadId = new AtomicInteger(1)
 
-  lazy val KinesisWorkersSharedContext = BlockingContext("KinesisSourceWorker")
+  lazy val KinesisWorkersSharedContext: ExecutionContext = BlockingContext("KinesisSourceWorker")
 
   private def apply(name: String): ExecutionContext = {
     val threadFactory = new ThreadFactory {

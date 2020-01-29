@@ -14,22 +14,17 @@ import software.amazon.kinesis.leases.LeaseManagementConfig
 import software.amazon.kinesis.metrics.MetricsConfig
 import software.amazon.kinesis.retrieval.RetrievalConfig
 
-import scala.concurrent.duration.{FiniteDuration, MILLISECONDS}
-
-
-case class ConsumerConfig(
-                           streamName: String,
-                           appName: String,
-                           workerId: String,
-                           kinesisClient: KinesisAsyncClient,
-                           dynamoClient: DynamoDbAsyncClient,
-                           cloudwatchClient: CloudWatchAsyncClient,
-                           initialPositionInStreamExtended: InitialPositionInStreamExtended =
-                           InitialPositionInStreamExtended.newInitialPosition(InitialPositionInStream.LATEST),
-                           coordinatorConfig: Option[CoordinatorConfig] = None,
-                           leaseManagementConfig: Option[LeaseManagementConfig] = None,
-                           metricsConfig: Option[MetricsConfig] = None,
-                           retrievalConfig: Option[RetrievalConfig] = None
+case class ConsumerConfig(streamName: String,
+                          appName: String,
+                          workerId: String,
+                          kinesisClient: KinesisAsyncClient,
+                          dynamoClient: DynamoDbAsyncClient,
+                          cloudwatchClient: CloudWatchAsyncClient,
+                          initialPositionInStreamExtended: InitialPositionInStreamExtended = InitialPositionInStreamExtended.newInitialPosition(InitialPositionInStream.LATEST),
+                          coordinatorConfig: Option[CoordinatorConfig] = None,
+                          leaseManagementConfig: Option[LeaseManagementConfig] = None,
+                          metricsConfig: Option[MetricsConfig] = None,
+                          retrievalConfig: Option[RetrievalConfig] = None
                          ) {
 
   def withInitialStreamPosition(position: InitialPositionInStream): ConsumerConfig =
@@ -51,6 +46,8 @@ case class ConsumerConfig(
   def withMetricsConfig(config: MetricsConfig): ConsumerConfig = this.copy(metricsConfig = Some(config))
 
   def withRetrievalConfig(config: RetrievalConfig): ConsumerConfig = this.copy(retrievalConfig = Some(config))
+
+  def withWorkerId(workerId: String): ConsumerConfig = this.copy(workerId = workerId)
 }
 
 object ConsumerConfig {
@@ -81,13 +78,7 @@ object ConsumerConfig {
                 ): ConsumerConfig = {
     def getOpt[A](key: String, lookup: String => A): Option[A] = if (config.hasPath(key)) Some(lookup(key)) else None
 
-    def getIntOpt(key: String): Option[Int] = getOpt(key, config.getInt)
-
     def getStringOpt(key: String): Option[String] = getOpt(key, config.getString)
-
-    def getDuration(key: String): FiniteDuration = FiniteDuration(config.getDuration(key).toMillis, MILLISECONDS)
-
-    def getDurationOpt(key: String): Option[FiniteDuration] = getOpt(key, getDuration)
 
     val StreamPositionLatest = "latest"
     val StreamPositionHorizon = "trim-horizon"

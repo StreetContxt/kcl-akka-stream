@@ -1,11 +1,13 @@
 package com.contxt.kinesis
 
-import akka.stream.{ Attributes, Inlet, SinkShape }
+import akka.stream.{Attributes, Inlet, SinkShape}
 import akka.stream.scaladsl.Sink
-import akka.stream.stage.{ GraphStageLogic, GraphStageWithMaterializedValue, InHandler }
-import com.amazonaws.services.kinesis.clientlibrary.exceptions.ThrottlingException
+import akka.stream.stage.{GraphStageLogic, GraphStageWithMaterializedValue, InHandler}
 import java.util.concurrent.ConcurrentLinkedQueue
+
 import org.scalatest.concurrent.Eventually._
+import software.amazon.kinesis.exceptions.ThrottlingException
+
 import scala.collection.JavaConverters._
 
 object Inspectable {

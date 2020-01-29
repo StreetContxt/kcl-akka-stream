@@ -1,29 +1,22 @@
 package com.contxt.kinesis
 
-import akka.Done
-import akka.util.ByteString
 import java.time.Instant
 
+import akka.Done
+import akka.util.ByteString
 import software.amazon.awssdk.services.kinesis.model.EncryptionType
 import software.amazon.kinesis.retrieval.KinesisClientRecord
 
 import scala.concurrent.{Future, Promise}
 
-case class KinesisRecord(
-  data: ByteString,
-
-  partitionKey: String,
-
-  explicitHashKey: Option[String],
-
-  sequenceNumber: String,
-
-  subSequenceNumber: Option[Long],
-
-  approximateArrivalTimestamp: Instant,
-
-  encryptionType: EncryptionType
-) {
+case class KinesisRecord(data: ByteString,
+                         partitionKey: String,
+                         explicitHashKey: Option[String],
+                         sequenceNumber: String,
+                         subSequenceNumber: Option[Long],
+                         approximateArrivalTimestamp: Instant,
+                         encryptionType: Option[EncryptionType]
+                        ) {
   private val completionPromise = Promise[Done]
 
   private[kinesis] def completionFuture: Future[Done] = completionPromise.future
@@ -54,11 +47,11 @@ object KinesisRecord {
     KinesisRecord(
       data = ByteString(record.data()),
       partitionKey = record.partitionKey(),
-      explicitHashKey = Some(record.explicitHashKey()),
+      explicitHashKey = Option(record.explicitHashKey()),
       sequenceNumber = record.sequenceNumber(),
-      subSequenceNumber = Some(record.subSequenceNumber()),
+      subSequenceNumber = Option(record.subSequenceNumber()),
       approximateArrivalTimestamp = record.approximateArrivalTimestamp(),
-      encryptionType = record.encryptionType()
+      encryptionType = Option(record.encryptionType())
     )
   }
 }

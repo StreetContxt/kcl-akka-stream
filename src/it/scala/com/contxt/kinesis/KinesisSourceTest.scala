@@ -12,7 +12,6 @@ import com.contxt.kinesis.MessageUtil._
 import org.slf4j.LoggerFactory
 import scala.concurrent.Await
 import scala.util.{ Failure, Success, Try }
-import scala.util.control.NonFatal
 
 class KinesisSourceTest
   extends TestKit(ActorSystem("TestSystem"))
@@ -63,7 +62,7 @@ class KinesisSourceTest
 
     "a consumer is not checkpointing" should {
       "reprocess messages after the bad consumer shuts down" in { implicit config =>
-        val minUncommitedRecordsBeforeBadConsumerShutdown = 500
+        val minUncommittedRecordsBeforeBadConsumerShutdown = 500
         val (producerKillSwitch, sentFuture) = messageSource(keyCount = 100, messageIntervalPerKey = 200.millis)
           .viaMat(KillSwitches.single)(Keep.right)
           .toMat(producerSink)(Keep.both)
@@ -77,7 +76,7 @@ class KinesisSourceTest
               .via(extractKeyAndMessage)
               .runWith(Inspectable.sink)
 
-            eventually(require(inspectReceived2().size > minUncommitedRecordsBeforeBadConsumerShutdown))
+            eventually(require(inspectReceived2().size > minUncommittedRecordsBeforeBadConsumerShutdown))
             consumerStats1.waitForAtLeastOneCheckpointPerShard(halfShardCount)
           }
 
@@ -234,7 +233,7 @@ class KinesisSourceTest
           val inspectReceived = runKinesisSourceWithInspection(consumerSource)
 
           eventually(require(inspectReceived().nonEmpty))
-          KinesisResourceManager.updateDynamoDbTableWithRate(config.applicationName, requetsPerSecond = 1)
+          KinesisResourceManager.updateDynamoDbTableWithRate(config.applicationName, requestPerSecond = 1)
 
           consumerStats.waitForAtLeastOneCheckpointPerShard(targetShardCount)
           consumerStats.waitForNrOfThrottledCheckpoints(5)
