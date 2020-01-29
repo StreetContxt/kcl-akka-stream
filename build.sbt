@@ -12,15 +12,16 @@ resolvers in ThisBuild += Resolver.bintrayRepo("streetcontxt", "maven")
 
 name := "kcl-akka-stream"
 
-val versionPattern = "release-([0-9\\.]*)".r
-version := sys.props
-  .get("CIRCLE_TAG")
-  .orElse(sys.env.get("CIRCLE_TAG"))
-  .flatMap {
-    case versionPattern(v) => Some(v)
-    case _ => None
-  }
-  .getOrElse("LOCAL-SNAPSHOT")
+version := "3.0.0"
+//val versionPattern = "release-([0-9\\.]*)".r
+//version := sys.props
+//  .get("CIRCLE_TAG")
+//  .orElse(sys.env.get("CIRCLE_TAG"))
+//  .flatMap {
+//    case versionPattern(v) => Some(v)
+//    case _ => None
+//  }
+//  .getOrElse("LOCAL-SNAPSHOT")
 
 val slf4j = "org.slf4j" % "slf4j-api" % "1.7.21"
 val logback = "ch.qos.logback" % "logback-classic" % "1.2.3"
