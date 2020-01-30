@@ -3,7 +3,7 @@ package com.contxt.kinesis
 import akka.Done
 import akka.actor.ActorSystem
 import akka.stream.scaladsl.{Keep, Sink, Source}
-import akka.stream.{KillSwitches, UniqueKillSwitch}
+import akka.stream.{ActorMaterializer, KillSwitches, UniqueKillSwitch}
 import akka.testkit.TestKit
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.concurrent.Eventually
@@ -22,7 +22,7 @@ class KinesisSourceFactoryTest
     with WordSpecLike with BeforeAndAfterAll with Matchers with Eventually with MockFactory{
   override protected def afterAll: Unit = TestKit.shutdownActorSystem(system)
 
-  protected implicit val actorSystem: ActorSystem = ActorSystem("MainActorSystem")
+  protected implicit val actorMaterializer: ActorMaterializer = ActorMaterializer()
   private val awaitDuration = 5.seconds
 
   "KinesisSource" when {
