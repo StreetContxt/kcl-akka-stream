@@ -16,9 +16,9 @@ trait ConsumerStats {
 
   def trackRecord(shardConsumerId: ShardConsumerId, record: KinesisRecord): Unit
 
-  def trackBatchEnqueue(
-    shardConsumerId: ShardConsumerId, batchSize: Int
-  )(closure: => Future[QueueOfferResult]): Future[QueueOfferResult]
+  def trackBatchEnqueue(shardConsumerId: ShardConsumerId, batchSize: Int)(
+    closure: => Future[QueueOfferResult]
+  ): Future[QueueOfferResult]
 
   def recordNrOfInFlightRecords(shardConsumerId: ShardConsumerId, totalCount: Int): Unit
   def recordNrOfProcessedUncheckpointedRecords(shardConsumerId: ShardConsumerId, totalCount: Int): Unit
@@ -32,10 +32,10 @@ object ConsumerStats {
 
   def getInstance(config: Config): ConsumerStats = {
     try {
-      val className = config.getString("com.contxt.kinesis.consumer.stats-class-name")
+      val className =
+        config.getString("com.contxt.kinesis.consumer.stats-class-name")
       Class.forName(className).newInstance().asInstanceOf[ConsumerStats]
-    }
-    catch {
+    } catch {
       case NonFatal(e) =>
         log.error("Could not load a `ConsumerStats` instance, falling back to `NoopConsumerStats`.", e)
         new NoopConsumerStats
@@ -50,9 +50,9 @@ class NoopConsumerStats extends ConsumerStats {
   def checkpointFailed(shardConsumerId: ShardConsumerId, e: Throwable): Unit = {}
 
   def trackRecord(shardConsumerId: ShardConsumerId, record: KinesisRecord): Unit = {}
-  def trackBatchEnqueue(
-    shardConsumerId: ShardConsumerId, batchSize: Int
-  )(closure: => Future[QueueOfferResult]): Future[QueueOfferResult] = closure
+  def trackBatchEnqueue(shardConsumerId: ShardConsumerId, batchSize: Int)(
+    closure: => Future[QueueOfferResult]
+  ): Future[QueueOfferResult] = closure
 
   def recordNrOfInFlightRecords(shardConsumerId: ShardConsumerId, totalCount: Int): Unit = {}
   def recordNrOfProcessedUncheckpointedRecords(shardConsumerId: ShardConsumerId, totalCount: Int): Unit = {}

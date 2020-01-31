@@ -1,14 +1,14 @@
 package com.contxt.kinesis
 
-import akka.Done
-import akka.util.ByteString
 import java.time.Instant
 
+import akka.Done
+import akka.util.ByteString
 import org.scalatest.{Matchers, WordSpec}
 import software.amazon.awssdk.services.kinesis.model.EncryptionType
 
-import scala.concurrent.{Await, TimeoutException}
 import scala.concurrent.duration._
+import scala.concurrent.{Await, TimeoutException}
 
 class ShardCheckpointTrackerTest extends WordSpec with Matchers {
   private val completionFutureAwaitDuration = 1.second
@@ -24,7 +24,8 @@ class ShardCheckpointTrackerTest extends WordSpec with Matchers {
 
       "checkpoint on target record count" in {
         val tracker = mkCheckpointTracker()
-        val records = mkRecords(checkpointConfig.checkpointAfterProcessingNrOfRecords)
+        val records =
+          mkRecords(checkpointConfig.checkpointAfterProcessingNrOfRecords)
         tracker.watchForCompletion(records)
         records.foreach(_.markProcessed())
         tracker.shouldCheckpoint shouldBe true
@@ -164,7 +165,8 @@ class ShardCheckpointTrackerTest extends WordSpec with Matchers {
     checkpointAfterProcessingNrOfRecords = 2,
     maxWaitForCompletionOnStreamShutdown = 2.second
   )
-  private def mkCheckpointTracker() = new ShardCheckpointTracker(checkpointConfig)
+  private def mkCheckpointTracker() =
+    new ShardCheckpointTracker(checkpointConfig)
 
   private def mkRecord() = KinesisRecord(
     ByteString("testData".getBytes("UTF-8")),

@@ -18,13 +18,15 @@ class KinesisRecordTest extends WordSpec with Matchers {
         val timestamp = Instant.now()
         val encryptionType = EncryptionType.KMS
 
-        val kinesisRecord = KinesisRecord.fromMutableRecord(KinesisClientRecord.builder()
-          .data(ByteBuffer.wrap(data))
-          .partitionKey(partitionKey)
-          .sequenceNumber(sequenceNumber)
-          .approximateArrivalTimestamp(timestamp)
-          .encryptionType(encryptionType)
-          .build()
+        val kinesisRecord = KinesisRecord.fromMutableRecord(
+          KinesisClientRecord
+            .builder()
+            .data(ByteBuffer.wrap(data))
+            .partitionKey(partitionKey)
+            .sequenceNumber(sequenceNumber)
+            .approximateArrivalTimestamp(timestamp)
+            .encryptionType(encryptionType)
+            .build()
         )
         val expected = KinesisRecord(
           ByteString(data),
@@ -49,7 +51,8 @@ class KinesisRecordTest extends WordSpec with Matchers {
         val subSequenceNumber = 123L
         val timestamp = Instant.now()
 
-        val userRecord = KinesisClientRecord.builder()
+        val userRecord = KinesisClientRecord
+          .builder()
           .data(ByteBuffer.wrap(data))
           .partitionKey(partitionKey)
           .sequenceNumber(sequenceNumber)

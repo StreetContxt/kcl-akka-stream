@@ -14,28 +14,25 @@ import software.amazon.kinesis.leases.LeaseManagementConfig
 import software.amazon.kinesis.metrics.MetricsConfig
 import software.amazon.kinesis.retrieval.RetrievalConfig
 
-case class ConsumerConfig(streamName: String,
-                          appName: String,
-                          workerId: String,
-                          kinesisClient: KinesisAsyncClient,
-                          dynamoClient: DynamoDbAsyncClient,
-                          cloudwatchClient: CloudWatchAsyncClient,
-                          initialPositionInStreamExtended: InitialPositionInStreamExtended = InitialPositionInStreamExtended.newInitialPosition(InitialPositionInStream.LATEST),
-                          coordinatorConfig: Option[CoordinatorConfig] = None,
-                          leaseManagementConfig: Option[LeaseManagementConfig] = None,
-                          metricsConfig: Option[MetricsConfig] = None,
-                          retrievalConfig: Option[RetrievalConfig] = None
-                         ) {
-
+case class ConsumerConfig(
+  streamName: String,
+  appName: String,
+  workerId: String,
+  kinesisClient: KinesisAsyncClient,
+  dynamoClient: DynamoDbAsyncClient,
+  cloudwatchClient: CloudWatchAsyncClient,
+  initialPositionInStreamExtended: InitialPositionInStreamExtended =
+    InitialPositionInStreamExtended.newInitialPosition(InitialPositionInStream.LATEST),
+  coordinatorConfig: Option[CoordinatorConfig] = None,
+  leaseManagementConfig: Option[LeaseManagementConfig] = None,
+  metricsConfig: Option[MetricsConfig] = None,
+  retrievalConfig: Option[RetrievalConfig] = None
+) {
   def withInitialStreamPosition(position: InitialPositionInStream): ConsumerConfig =
-    this.copy(
-      initialPositionInStreamExtended = InitialPositionInStreamExtended.newInitialPosition(position)
-    )
+    this.copy(initialPositionInStreamExtended = InitialPositionInStreamExtended.newInitialPosition(position))
 
   def withInitialStreamPositionAtTimestamp(time: Date): ConsumerConfig =
-    this.copy(
-      initialPositionInStreamExtended = InitialPositionInStreamExtended.newInitialPositionAtTimestamp(time)
-    )
+    this.copy(initialPositionInStreamExtended = InitialPositionInStreamExtended.newInitialPositionAtTimestamp(time))
 
   def withCoordinatorConfig(config: CoordinatorConfig): ConsumerConfig =
     this.copy(coordinatorConfig = Some(config))
@@ -43,11 +40,14 @@ case class ConsumerConfig(streamName: String,
   def withLeaseManagementConfig(config: LeaseManagementConfig): ConsumerConfig =
     this.copy(leaseManagementConfig = Some(config))
 
-  def withMetricsConfig(config: MetricsConfig): ConsumerConfig = this.copy(metricsConfig = Some(config))
+  def withMetricsConfig(config: MetricsConfig): ConsumerConfig =
+    this.copy(metricsConfig = Some(config))
 
-  def withRetrievalConfig(config: RetrievalConfig): ConsumerConfig = this.copy(retrievalConfig = Some(config))
+  def withRetrievalConfig(config: RetrievalConfig): ConsumerConfig =
+    this.copy(retrievalConfig = Some(config))
 
-  def withWorkerId(workerId: String): ConsumerConfig = this.copy(workerId = workerId)
+  def withWorkerId(workerId: String): ConsumerConfig =
+    this.copy(workerId = workerId)
 }
 
 object ConsumerConfig {
@@ -59,26 +59,23 @@ object ConsumerConfig {
     withNames(streamName, appName)(kinesisClient, dynamoClient, cloudWatchClient)
   }
 
-  def withNames(streamName: String, appName: String)
-               (implicit kac: KinesisAsyncClient, dac: DynamoDbAsyncClient, cwac: CloudWatchAsyncClient): ConsumerConfig =
-    ConsumerConfig(
-      streamName,
-      appName,
-      generateWorkerId(),
-      kac,
-      dac,
-      cwac
-    )
+  def withNames(
+    streamName: String,
+    appName: String
+  )(implicit kac: KinesisAsyncClient, dac: DynamoDbAsyncClient, cwac: CloudWatchAsyncClient): ConsumerConfig =
+    ConsumerConfig(streamName, appName, generateWorkerId(), kac, dac, cwac)
 
-  def fromConfig(config: Config)
-                (implicit
-                 kac: KinesisAsyncClient = null,
-                 dac: DynamoDbAsyncClient = null,
-                 cwac: CloudWatchAsyncClient = null
-                ): ConsumerConfig = {
-    def getOpt[A](key: String, lookup: String => A): Option[A] = if (config.hasPath(key)) Some(lookup(key)) else None
+  def fromConfig(config: Config)(
+    implicit
+    kac: KinesisAsyncClient = null,
+    dac: DynamoDbAsyncClient = null,
+    cwac: CloudWatchAsyncClient = null
+  ): ConsumerConfig = {
+    def getOpt[A](key: String, lookup: String => A): Option[A] =
+      if (config.hasPath(key)) Some(lookup(key)) else None
 
-    def getStringOpt(key: String): Option[String] = getOpt(key, config.getString)
+    def getStringOpt(key: String): Option[String] =
+      getOpt(key, config.getString)
 
     val StreamPositionLatest = "latest"
     val StreamPositionHorizon = "trim-horizon"
@@ -92,27 +89,21 @@ object ConsumerConfig {
       .map {
         case StreamPositionLatest => latestPos
         case StreamPositionHorizon =>
-          InitialPositionInStreamExtended.newInitialPosition(
-            InitialPositionInStream.TRIM_HORIZON)
+          InitialPositionInStreamExtended.newInitialPosition(InitialPositionInStream.TRIM_HORIZON)
         case StreamPositionTimestamp =>
           InitialPositionInStreamExtended.newInitialPositionAtTimestamp(
-            DateFormat.getInstance().parse(config.getString("position.time")))
+            DateFormat.getInstance().parse(config.getString("position.time"))
+          )
       }
       .getOrElse(latestPos)
 
     val kinesisClient = Option(kac).getOrElse(KinesisClientUtil.createKinesisAsyncClient(KinesisAsyncClient.builder()))
-    val dynamoClient = Option(dac).getOrElse(DynamoDbAsyncClient.builder.build())
-    val cloudWatchClient = Option(cwac).getOrElse(CloudWatchAsyncClient.builder.build())
+    val dynamoClient =
+      Option(dac).getOrElse(DynamoDbAsyncClient.builder.build())
+    val cloudWatchClient =
+      Option(cwac).getOrElse(CloudWatchAsyncClient.builder.build())
 
-    ConsumerConfig(
-      streamName,
-      name,
-      generateWorkerId(),
-      kinesisClient,
-      dynamoClient,
-      cloudWatchClient,
-      streamPosition
-    )
+    ConsumerConfig(streamName, name, generateWorkerId(), kinesisClient, dynamoClient, cloudWatchClient, streamPosition)
   }
 
   private def generateWorkerId(): String = UUID.randomUUID().toString

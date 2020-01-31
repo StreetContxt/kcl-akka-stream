@@ -1,10 +1,10 @@
 package com.contxt.kinesis
 
-import akka.stream.{Attributes, Inlet, SinkShape}
-import akka.stream.scaladsl.Sink
-import akka.stream.stage.{GraphStageLogic, GraphStageWithMaterializedValue, InHandler}
 import java.util.concurrent.ConcurrentLinkedQueue
 
+import akka.stream.scaladsl.Sink
+import akka.stream.stage.{GraphStageLogic, GraphStageWithMaterializedValue, InHandler}
+import akka.stream.{Attributes, Inlet, SinkShape}
 import org.scalatest.concurrent.Eventually._
 import software.amazon.kinesis.exceptions.ThrottlingException
 
@@ -14,43 +14,43 @@ object Inspectable {
   /** Returns a Sink that collects incoming elements into a list, and whose state can be inspected at any time
     * by using the function returned as the materialized value. */
   def sink[A]: Sink[A, () => IndexedSeq[A]] = {
-    val stage = new GraphStageWithMaterializedValue[SinkShape[A], ConcurrentLinkedQueue[A]] {
-      val in: Inlet[A] = Inlet("InspectableSink")
-      override val shape: SinkShape[A] = SinkShape(in)
+    val stage =
+      new GraphStageWithMaterializedValue[SinkShape[A], ConcurrentLinkedQueue[A]] {
+        val in: Inlet[A] = Inlet("InspectableSink")
+        override val shape: SinkShape[A] = SinkShape(in)
 
-      override def createLogicAndMaterializedValue(
-        inheritedAttributes: Attributes
-      ): (GraphStageLogic, ConcurrentLinkedQueue[A]) = {
-        val nonBlockingQueue = new ConcurrentLinkedQueue[A]
+        override def createLogicAndMaterializedValue(
+          inheritedAttributes: Attributes
+        ): (GraphStageLogic, ConcurrentLinkedQueue[A]) = {
+          val nonBlockingQueue = new ConcurrentLinkedQueue[A]
 
-        val logic = new GraphStageLogic(shape) {
-          override def preStart(): Unit = pull(in)
+          val logic = new GraphStageLogic(shape) {
+            override def preStart(): Unit = pull(in)
 
-          setHandler(
-            in, new InHandler {
+            setHandler(in, new InHandler {
               override def onPush(): Unit = {
                 nonBlockingQueue.add(grab(in))
                 pull(in)
               }
-            }
-          )
-        }
+            })
+          }
 
-        (logic, nonBlockingQueue)
+          (logic, nonBlockingQueue)
+        }
       }
-    }
 
     Sink
       .fromGraph(stage)
-      .mapMaterializedValue { nonBlockingQueue =>
-        () => nonBlockingQueue.asScala.toIndexedSeq
+      .mapMaterializedValue { nonBlockingQueue => () =>
+        nonBlockingQueue.asScala.toIndexedSeq
       }
   }
 }
 
 private[kinesis] class InspectableConsumerStats extends NoopConsumerStats {
   import InspectableConsumerStats._
-  private val checkpointEventsByShardConsumer = new ConcurrentLinkedQueue[(ShardConsumerId, CheckpointEvent)]
+  private val checkpointEventsByShardConsumer =
+    new ConcurrentLinkedQueue[(ShardConsumerId, CheckpointEvent)]
 
   override def checkpointAcked(shardConsumerId: ShardConsumerId): Unit = {
     checkpointEventsByShardConsumer.add(shardConsumerId -> CheckpointAcked)
@@ -58,7 +58,8 @@ private[kinesis] class InspectableConsumerStats extends NoopConsumerStats {
 
   override def checkpointDelayed(shardConsumerId: ShardConsumerId, e: Throwable): Unit = {
     e match {
-      case _: ThrottlingException => checkpointEventsByShardConsumer.add(shardConsumerId -> CheckpointThrottled)
+      case _: ThrottlingException =>
+        checkpointEventsByShardConsumer.add(shardConsumerId -> CheckpointThrottled)
     }
   }
 
@@ -66,17 +67,19 @@ private[kinesis] class InspectableConsumerStats extends NoopConsumerStats {
     waitForNrOfCheckpointsPerShard(minNumberOfShards, 1)
   }
 
-  def waitForNrOfCheckpointsPerShard(
-    minNumberOfShards: Int, checkpointCount: Int
-  )(implicit patienceConfig: PatienceConfig): Unit = {
+  def waitForNrOfCheckpointsPerShard(minNumberOfShards: Int, checkpointCount: Int)(
+    implicit patienceConfig: PatienceConfig
+  ): Unit = {
     checkpointEventsByShardConsumer.clear()
     eventually {
       val currentCheckpointCounts = checkpointCountByShardConsumer()
       // The first checkpoint may already be in-progress when we inspect acked checkpoints.
       val minCheckpointCountDelta = checkpointCount + 1
-      val shardConsumersWithEnoughCheckpoints = currentCheckpointCounts.collect {
-        case (shardConsumer, count) if count >= minCheckpointCountDelta => shardConsumer
-      }
+      val shardConsumersWithEnoughCheckpoints =
+        currentCheckpointCounts.collect {
+          case (shardConsumer, count) if count >= minCheckpointCountDelta =>
+            shardConsumer
+        }
       require(shardConsumersWithEnoughCheckpoints.size >= minNumberOfShards)
     }
   }

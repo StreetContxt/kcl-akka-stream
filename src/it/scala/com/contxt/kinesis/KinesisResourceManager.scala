@@ -19,15 +19,22 @@ object KinesisResourceManager {
   val WorkerTerminationTimeout: Duration = 30.seconds
 
   val RegionName: String = Option(System.getenv("KINESIS_TEST_REGION")).get
-  val CredentialsProvider: DefaultCredentialsProvider = DefaultCredentialsProvider.builder.build()
+  val CredentialsProvider: DefaultCredentialsProvider =
+    DefaultCredentialsProvider.builder.build()
 
   def createStream(regionName: String, streamName: String, shardCount: Int): StreamDescription = {
     withKinesisClient(regionName) { client =>
-      client.createStream(CreateStreamRequest.builder().streamName(streamName).shardCount(shardCount).build())
+      client.createStream(
+        CreateStreamRequest
+          .builder()
+          .streamName(streamName)
+          .shardCount(shardCount)
+          .build()
+      )
       eventually(timeout(CreateStreamTimeout), interval(2.second)) {
-        val description = client.describeStream(
-          DescribeStreamRequest.builder().streamName(
-            streamName).build()).streamDescription()
+        val description = client
+          .describeStream(DescribeStreamRequest.builder().streamName(streamName).build())
+          .streamDescription()
         require(description.streamStatusAsString() == "ACTIVE")
         description
       }
@@ -38,8 +45,7 @@ object KinesisResourceManager {
     withKinesisClient(regionName) { client =>
       try {
         client.deleteStream(DeleteStreamRequest.builder().streamName(streamName).build())
-      }
-      catch {
+      } catch {
         case NonFatal(e) => e.printStackTrace()
       }
     }
@@ -48,11 +54,15 @@ object KinesisResourceManager {
 
   def reshardStream(regionName: String, streamName: String, newActiveShardCount: Int): Unit = {
     withKinesisClient(regionName) { client =>
-      val currentShardCount = client.describeStream(DescribeStreamRequest.builder().streamName(streamName).build())
-        .streamDescription().shards().size
+      val currentShardCount = client
+        .describeStream(DescribeStreamRequest.builder().streamName(streamName).build())
+        .streamDescription()
+        .shards()
+        .size
       val expectedShardCount = currentShardCount + newActiveShardCount
 
-      val request = UpdateShardCountRequest.builder()
+      val request = UpdateShardCountRequest
+        .builder()
         .streamName(streamName)
         .targetShardCount(newActiveShardCount)
         .scalingType(ScalingType.UNIFORM_SCALING)
@@ -61,9 +71,16 @@ object KinesisResourceManager {
       client.updateShardCount(request)
 
       eventually(timeout(ReshardStreamTimeout), interval(2.second)) {
-        val shardCount = client.describeStream(DescribeStreamRequest.builder()
-          .streamName(streamName)
-          .build()).streamDescription().shards().size
+        val shardCount = client
+          .describeStream(
+            DescribeStreamRequest
+              .builder()
+              .streamName(streamName)
+              .build()
+          )
+          .streamDescription()
+          .shards()
+          .size
         require(shardCount == expectedShardCount)
       }
     }
@@ -83,12 +100,16 @@ object KinesisResourceManager {
     withDynamoDbClient { dynamoDb =>
       waitForTableToBecomeAvailable(tableName, dynamoDb)
       dynamoDb.updateTable(
-        UpdateTableRequest.builder()
+        UpdateTableRequest
+          .builder()
           .tableName(tableName)
-          .provisionedThroughput(ProvisionedThroughput.builder()
-            .readCapacityUnits(requestPerSecond)
-            .writeCapacityUnits(requestPerSecond)
-            .build())
+          .provisionedThroughput(
+            ProvisionedThroughput
+              .builder()
+              .readCapacityUnits(requestPerSecond)
+              .writeCapacityUnits(requestPerSecond)
+              .build()
+          )
           .build()
       )
       waitForTableToBecomeAvailable(tableName, dynamoDb)
@@ -96,7 +117,8 @@ object KinesisResourceManager {
   }
 
   private def mkKinesisClient(regionName: String): KinesisClient = {
-    KinesisClient.builder()
+    KinesisClient
+      .builder()
       .region(Region.of(regionName))
       .credentialsProvider(CredentialsProvider)
       .build()
@@ -107,12 +129,12 @@ object KinesisResourceManager {
       try {
         waitForTableToBecomeAvailable(tableName, dynamoDb)
         dynamoDb.deleteTable(
-          DeleteTableRequest.builder()
+          DeleteTableRequest
+            .builder()
             .tableName(tableName)
             .build()
         )
-      }
-      catch {
+      } catch {
         case NonFatal(e) => // Ignore.
       }
     }
@@ -122,17 +144,20 @@ object KinesisResourceManager {
     println("Waiting for " + tableName + " to become ACTIVE...")
     val startTime = System.currentTimeMillis
     val endTime = startTime + (10 * 60 * 1000)
-    while ( {
+    while ({
       System.currentTimeMillis < endTime
     }) {
       Thread.sleep(1000 * 20)
       try {
-        val table = dynamoDb.describeTable(DescribeTableRequest.builder().tableName(tableName).build()).table()
+        val table = dynamoDb
+          .describeTable(DescribeTableRequest.builder().tableName(tableName).build())
+          .table()
         val tableStatus = table.tableStatus()
         if (tableStatus == TableStatus.ACTIVE) return
       } catch {
         case ase: AmazonServiceException =>
-          if (!ase.getErrorCode.equalsIgnoreCase("ResourceNotFoundException")) throw ase
+          if (!ase.getErrorCode.equalsIgnoreCase("ResourceNotFoundException"))
+            throw ase
       }
     }
     throw new RuntimeException("Table " + tableName + " never went active")

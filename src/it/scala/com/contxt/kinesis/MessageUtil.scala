@@ -1,12 +1,13 @@
 package com.contxt.kinesis
 
 object MessageUtil {
-
   /** Requires unique messages that were sent at least once and then processed at least once.
     * Sending a message batch can be retried, as long as the order of messages remains the same.
     * Processing of messages can restart at an earlier checkpoint, as long as the order of messages remains the same. */
   def dedupAndGroupByKey(keyMessagePairs: Seq[(String, String)]): Map[String, IndexedSeq[String]] = {
-    groupByKey(keyMessagePairs).map { case (key, value) => key -> removeReprocessed(key, value) }
+    groupByKey(keyMessagePairs).map {
+      case (key, value) => key -> removeReprocessed(key, value)
+    }
   }
 
   def groupByKey(keyMessagePairs: Seq[(String, String)]): Map[String, IndexedSeq[String]] = {
@@ -40,7 +41,8 @@ object MessageUtil {
       val lastMessage = messages(j)
       if (lastDistinct.isEmpty || lastDistinct.get != lastMessage) {
         val restartedAt = distinct.lastIndexOf(lastMessage)
-        if (restartedAt < lastRestartedAt) throw new UnexpectedMessageSequence(key, lastMessage, messages)
+        if (restartedAt < lastRestartedAt)
+          throw new UnexpectedMessageSequence(key, lastMessage, messages)
         lastRestartedAt = restartedAt
         val reprocessedSliceCandidate = distinct.slice(restartedAt, i)
         val lastIndexOfRetrySequence = unwindRetries(reprocessedSliceCandidate, j) - 1
@@ -48,8 +50,7 @@ object MessageUtil {
           throw new UnexpectedMessageSequence(key, lastMessage, messages)
         }
         j = lastIndexOfRetrySequence + 1
-      }
-      else {
+      } else {
         i += 1
         j += 1
       }
@@ -58,7 +59,6 @@ object MessageUtil {
   }
 
   private class UnexpectedMessageSequence(key: String, lastMessage: String, messages: IndexedSeq[String])
-    extends Exception(
-      s"Messages for key `$key` starting from `$lastMessage` were processed out of order: ${messages.mkString(",")}"
-    )
+      extends Exception(s"Messages for key `$key` starting from `$lastMessage` were processed out of order: ${messages
+        .mkString(",")}")
 }

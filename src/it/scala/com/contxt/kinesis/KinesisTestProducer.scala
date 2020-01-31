@@ -1,9 +1,11 @@
 package com.contxt.kinesis
 
+import java.nio.ByteBuffer
+
 import akka.NotUsed
 import akka.stream.scaladsl._
-import com.amazonaws.services.kinesis.producer.{ KinesisProducerConfiguration, UserRecordResult }
-import java.nio.ByteBuffer
+import com.amazonaws.services.kinesis.producer.{KinesisProducerConfiguration, UserRecordResult}
+
 import scala.concurrent.Future
 import scala.language.implicitConversions
 
@@ -25,7 +27,8 @@ object KinesisTestProducer {
   }
 
   def sink(
-    streamName: String, producerConfig: KinesisProducerConfiguration
+    streamName: String,
+    producerConfig: KinesisProducerConfiguration
   ): Sink[(String, String), Future[Seq[(String, String)]]] = {
     import scala.concurrent.ExecutionContext.Implicits.global
     val producer = KinesisTestProducer(streamName, producerConfig)
@@ -34,10 +37,11 @@ object KinesisTestProducer {
       .groupBy(maxSubstreams = Int.MaxValue, { case (key, message) => key })
       .detach
       // `parallelism = 1` enforces message ordering, which is good for testing, but too slow for normal use.
-      .mapAsync(parallelism = 1){ case keyMessage @ (key, message) =>
-        producer
-          .send(key, message)
-          .map(_ => keyMessage)
+      .mapAsync(parallelism = 1) {
+        case keyMessage @ (key, message) =>
+          producer
+            .send(key, message)
+            .map(_ => keyMessage)
       }
       .mergeSubstreams
       .watchTermination()(Keep.right)

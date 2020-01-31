@@ -1,23 +1,23 @@
 package com.contxt.kinesis
 
-import akka.Done
-import akka.stream.{KillSwitch, QueueOfferResult}
-import akka.stream.scaladsl.SourceQueueWithComplete
 import java.time.ZonedDateTime
 
-import software.amazon.kinesis.lifecycle.events.{InitializationInput, LeaseLostInput, ProcessRecordsInput, ShardEndedInput, ShutdownRequestedInput}
+import akka.Done
+import akka.stream.scaladsl.SourceQueueWithComplete
+import akka.stream.{KillSwitch, QueueOfferResult}
 import org.slf4j.LoggerFactory
 import software.amazon.kinesis.exceptions.{KinesisClientLibDependencyException, ShutdownException, ThrottlingException}
+import software.amazon.kinesis.lifecycle.events.{InitializationInput, LeaseLostInput, ProcessRecordsInput, ShardEndedInput, ShutdownRequestedInput}
 import software.amazon.kinesis.lifecycle.{ShutdownInput, ShutdownReason}
 import software.amazon.kinesis.processor.{RecordProcessorCheckpointer, ShardRecordProcessor}
 import software.amazon.kinesis.retrieval.kpl.ExtendedSequenceNumber
 
+import scala.collection.JavaConversions._
 import scala.collection.immutable.Queue
-import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration._
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.Try
 import scala.util.control.NonFatal
-import scala.collection.JavaConversions._
 
 private[kinesis] class ShardCheckpointTracker(shardCheckpointConfig: ShardCheckpointConfig) {
   private val lock = new Object
@@ -35,15 +35,16 @@ private[kinesis] class ShardCheckpointTracker(shardCheckpointConfig: ShardCheckp
     processedButNotCheckpointedCount
   }
 
-  def watchForCompletion(records: Iterable[KinesisRecord]): Unit = lock.synchronized {
-    unprocessedInFlightRecords ++= records
-  }
+  def watchForCompletion(records: Iterable[KinesisRecord]): Unit =
+    lock.synchronized {
+      unprocessedInFlightRecords ++= records
+    }
 
   def shouldCheckpoint: Boolean = lock.synchronized {
     popProcessedRecords()
 
     processedButNotCheckpointedCount >= shardCheckpointConfig.checkpointAfterProcessingNrOfRecords ||
-      durationSinceLastCheckpoint() >= shardCheckpointConfig.checkpointPeriod
+    durationSinceLastCheckpoint() >= shardCheckpointConfig.checkpointPeriod
   }
 
   def checkpointLastProcessedRecord(checkpointLogic: KinesisRecord => Unit): Unit = lock.synchronized {
@@ -53,8 +54,7 @@ private[kinesis] class ShardCheckpointTracker(shardCheckpointConfig: ShardCheckp
       try {
         checkpointLogic(kinesisRecord)
         lastProcessedButNotCheckpointed = None
-      }
-      finally {
+      } finally {
         clearCheckpointTriggers()
       }
     }
@@ -71,7 +71,8 @@ private[kinesis] class ShardCheckpointTracker(shardCheckpointConfig: ShardCheckp
   }
 
   private def popProcessedRecords(): Unit = {
-    val processedRecords = unprocessedInFlightRecords.takeWhile(_.completionFuture.isCompleted)
+    val processedRecords =
+      unprocessedInFlightRecords.takeWhile(_.completionFuture.isCompleted)
     unprocessedInFlightRecords = unprocessedInFlightRecords.drop(processedRecords.size)
     processedButNotCheckpointedCount += processedRecords.size
     lastProcessedButNotCheckpointed = processedRecords.lastOption.orElse(lastProcessedButNotCheckpointed)
@@ -83,7 +84,10 @@ private[kinesis] class ShardCheckpointTracker(shardCheckpointConfig: ShardCheckp
   }
 
   private def durationSinceLastCheckpoint(): Duration = {
-    java.time.Duration.between(lastCheckpointedAt, ZonedDateTime.now()).toMillis.millis
+    java.time.Duration
+      .between(lastCheckpointedAt, ZonedDateTime.now())
+      .toMillis
+      .millis
   }
 }
 
@@ -114,10 +118,10 @@ private[kinesis] class RecordProcessorImpl(
       val kinesisRecords = records.map(KinesisRecord.fromMutableRecord)
       shardCheckpointTracker.watchForCompletion(kinesisRecords)
       recordCheckpointerStats()
-      if (shardCheckpointTracker.shouldCheckpoint) checkpointAndHandleErrors(processRecordsInput.checkpointer())
+      if (shardCheckpointTracker.shouldCheckpoint)
+        checkpointAndHandleErrors(processRecordsInput.checkpointer())
       if (kinesisRecords.nonEmpty) blockToEnqueueAndHandleResult(kinesisRecords)
-    }
-    catch {
+    } catch {
       case NonFatal(e) =>
         log.error("Unhandled exception in `processRecords()`, failing the streaming...", e)
         streamKillSwitch.abort(e)
@@ -132,7 +136,8 @@ private[kinesis] class RecordProcessorImpl(
   override def shardEnded(shardEndedInput: ShardEndedInput): Unit = {
     log.info(s"Shard end: $shardId")
     shutdown(
-      ShutdownInput.builder()
+      ShutdownInput
+        .builder()
         .checkpointer(shardEndedInput.checkpointer())
         .shutdownReason(ShutdownReason.SHARD_END)
         .build()
@@ -143,7 +148,8 @@ private[kinesis] class RecordProcessorImpl(
     log.info(s"Shutdown requested: $shardId")
 
     shutdown(
-      ShutdownInput.builder()
+      ShutdownInput
+        .builder()
         .checkpointer(shutdownRequestedInput.checkpointer())
         .shutdownReason(ShutdownReason.REQUESTED)
         .build()
@@ -178,9 +184,10 @@ private[kinesis] class RecordProcessorImpl(
   private def blockToEnqueueAndHandleResult(kinesisRecords: IndexedSeq[KinesisRecord]): Unit = {
     try {
       kinesisRecords.foreach(consumerStats.trackRecord(shardConsumerId, _))
-      val enqueueFuture = consumerStats.trackBatchEnqueue(shardConsumerId, kinesisRecords.size) {
-        queue.offer(kinesisRecords)
-      }
+      val enqueueFuture =
+        consumerStats.trackBatchEnqueue(shardConsumerId, kinesisRecords.size) {
+          queue.offer(kinesisRecords)
+        }
       Await.result(enqueueFuture, Duration.Inf) match {
         case QueueOfferResult.Enqueued =>
         // Do nothing.
@@ -189,9 +196,9 @@ private[kinesis] class RecordProcessorImpl(
         // Do nothing.
 
         case QueueOfferResult.Dropped =>
-          streamKillSwitch.abort(new AssertionError(
-            "RecordProcessor source queue must use `OverflowStrategy.Backpressure`."
-          ))
+          streamKillSwitch.abort(
+            new AssertionError("RecordProcessor source queue must use `OverflowStrategy.Backpressure`.")
+          )
 
         case QueueOfferResult.Failure(e) =>
           streamKillSwitch.abort(e)
@@ -209,8 +216,7 @@ private[kinesis] class RecordProcessorImpl(
         checkpointer.checkpoint()
         consumerStats.checkpointShardEndAcked(shardConsumerId)
         log.info(s"Successfully checkpointed $shardConsumerId at SHARD_END.")
-      }
-      else {
+      } else {
         shardCheckpointTracker.checkpointLastProcessedRecord { kinesisRecord =>
           val seqNumber = kinesisRecord.sequenceNumber
           val subSeqNumber = kinesisRecord.subSequenceNumber.getOrElse(0L)
@@ -219,12 +225,11 @@ private[kinesis] class RecordProcessorImpl(
           log.info(s"Successfully checkpointed $shardConsumerId at ${kinesisRecord.offsetString}.")
         }
       }
-    }
-    catch {
+    } catch {
       case e: ShutdownException =>
-        // Do nothing.
+      // Do nothing.
 
-      case e@(_: ThrottlingException | _: KinesisClientLibDependencyException) =>
+      case e @ (_: ThrottlingException | _: KinesisClientLibDependencyException) =>
         consumerStats.checkpointDelayed(shardConsumerId, e)
         log.error(s"Failed to checkpoint $shardConsumerId, will retry later.", e)
 
@@ -236,20 +241,18 @@ private[kinesis] class RecordProcessorImpl(
   }
 
   private def recordCheckpointerStats(): Unit = {
-    consumerStats.recordNrOfInFlightRecords(
-      shardConsumerId, shardCheckpointTracker.nrOfInFlightRecords
-    )
+    consumerStats.recordNrOfInFlightRecords(shardConsumerId, shardCheckpointTracker.nrOfInFlightRecords)
     consumerStats.recordNrOfProcessedUncheckpointedRecords(
-      shardConsumerId, shardCheckpointTracker.nrOfProcessedUncheckpointedRecords
+      shardConsumerId,
+      shardCheckpointTracker.nrOfProcessedUncheckpointedRecords
     )
   }
 
   private def waitForInFlightRecordsOrTermination(): Unit = {
     import scala.concurrent.ExecutionContext.Implicits.global
 
-    val allProcessedOrTermination = Future.firstCompletedOf(Seq(
-      shardCheckpointTracker.allInFlightRecordsProcessedFuture, streamTerminationFuture
-    ))
+    val allProcessedOrTermination =
+      Future.firstCompletedOf(Seq(shardCheckpointTracker.allInFlightRecordsProcessedFuture, streamTerminationFuture))
     Try(Await.result(allProcessedOrTermination, Duration.Inf))
   }
 
@@ -257,10 +260,12 @@ private[kinesis] class RecordProcessorImpl(
     import scala.concurrent.ExecutionContext.Implicits.global
 
     val hasStreamFailed = {
-      if (streamTerminationFuture.isCompleted) Try(Await.result(streamTerminationFuture, 0.seconds)).isFailure
+      if (streamTerminationFuture.isCompleted)
+        Try(Await.result(streamTerminationFuture, 0.seconds)).isFailure
       else false
     }
-    if (!hasStreamFailed) Try(Await.result(shardCheckpointTracker.allInFlightRecordsProcessedFuture, waitDuration))
+    if (!hasStreamFailed)
+      Try(Await.result(shardCheckpointTracker.allInFlightRecordsProcessedFuture, waitDuration))
   }
 
   private def getOffsetString(n: ExtendedSequenceNumber): String = {

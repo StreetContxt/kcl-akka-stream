@@ -18,15 +18,19 @@ import scala.concurrent.{Await, Future, Promise}
 import scala.util.{Failure, Try}
 
 class KinesisSourceFactoryTest
-  extends TestKit(ActorSystem("TestSystem"))
-    with WordSpecLike with BeforeAndAfterAll with Matchers with Eventually with MockFactory{
+    extends TestKit(ActorSystem("TestSystem"))
+    with WordSpecLike
+    with BeforeAndAfterAll
+    with Matchers
+    with Eventually
+    with MockFactory {
   override protected def afterAll: Unit = TestKit.shutdownActorSystem(system)
 
-  protected implicit val actorMaterializer: ActorMaterializer = ActorMaterializer()
+  protected implicit val actorMaterializer: ActorMaterializer =
+    ActorMaterializer()
   private val awaitDuration = 5.seconds
 
   "KinesisSource" when {
-
     "creating a worker" should {
       "fail stream if worker creation fails" in {
         val exception = new RuntimeException("TestException1")
@@ -47,7 +51,8 @@ class KinesisSourceFactoryTest
 
       "fail stream if worker.run() fails" in {
         val mockWorker = new MockWorker
-        val (workerTerminated, killSwitch, streamTerminated) = runSource(mockWorker)
+        val (workerTerminated, killSwitch, streamTerminated) =
+          runSource(mockWorker)
         val exception = new RuntimeException("TestException2")
         mockWorker.runControl.failure(exception)
         mockWorker.shutdownControl.success(Done)
@@ -59,7 +64,8 @@ class KinesisSourceFactoryTest
 
       "fail stream if worker.run() exits" in {
         val mockWorker = new MockWorker
-        val (workerTerminated, killSwitch, streamTerminated) = runSource(mockWorker)
+        val (workerTerminated, killSwitch, streamTerminated) =
+          runSource(mockWorker)
         mockWorker.runControl.success(Done)
         mockWorker.shutdownControl.success(Done)
         eventually {
@@ -70,7 +76,8 @@ class KinesisSourceFactoryTest
 
       "stop the worker if the source is cancelled" in {
         val mockWorker = new MockWorker
-        val (workerTerminated, killSwitch, streamTerminated) = runSource(mockWorker)
+        val (workerTerminated, killSwitch, streamTerminated) =
+          runSource(mockWorker)
         killSwitch.shutdown()
         mockWorker.shutdownControl.success(Done)
         eventually {
@@ -81,7 +88,8 @@ class KinesisSourceFactoryTest
 
       "propagate failures on worker shutdown" in {
         val mockWorker = new MockWorker
-        val (workerTerminated, killSwitch, streamTerminated) = runSource(mockWorker)
+        val (workerTerminated, killSwitch, streamTerminated) =
+          runSource(mockWorker)
         val exception = new RuntimeException("TestException3")
         killSwitch.shutdown()
         mockWorker.shutdownControl.failure(exception)
@@ -94,10 +102,11 @@ class KinesisSourceFactoryTest
   }
 
   private def runSource(mockWorker: MockWorker): (Future[Done], UniqueKillSwitch, Future[Done]) = {
-    val ((workerTerminated, killSwitch), streamTerminated) = mkSource(mockWorker)
-      .viaMat(KillSwitches.single)(Keep.both)
-      .toMat(Sink.ignore)(Keep.both)
-      .run()
+    val ((workerTerminated, killSwitch), streamTerminated) =
+      mkSource(mockWorker)
+        .viaMat(KillSwitches.single)(Keep.both)
+        .toMat(Sink.ignore)(Keep.both)
+        .run()
 
     (workerTerminated, killSwitch, streamTerminated)
   }
@@ -131,7 +140,7 @@ class KinesisSourceFactoryTest
 
     override def run(): Unit = Await.result(runControl.future, Duration.Inf)
 
-    override def shutdownAndWait(): Unit = Await.result(shutdownControl.future, Duration.Inf)
+    override def shutdownAndWait(): Unit =
+      Await.result(shutdownControl.future, Duration.Inf)
   }
-
 }

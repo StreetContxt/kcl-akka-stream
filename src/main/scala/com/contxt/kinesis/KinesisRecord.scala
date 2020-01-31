@@ -9,14 +9,15 @@ import software.amazon.kinesis.retrieval.KinesisClientRecord
 
 import scala.concurrent.{Future, Promise}
 
-case class KinesisRecord(data: ByteString,
-                         partitionKey: String,
-                         explicitHashKey: Option[String],
-                         sequenceNumber: String,
-                         subSequenceNumber: Option[Long],
-                         approximateArrivalTimestamp: Instant,
-                         encryptionType: Option[EncryptionType]
-                        ) {
+case class KinesisRecord(
+  data: ByteString,
+  partitionKey: String,
+  explicitHashKey: Option[String],
+  sequenceNumber: String,
+  subSequenceNumber: Option[Long],
+  approximateArrivalTimestamp: Instant,
+  encryptionType: Option[EncryptionType]
+) {
   private val completionPromise = Promise[Done]
 
   private[kinesis] def completionFuture: Future[Done] = completionPromise.future
@@ -36,7 +37,8 @@ case class KinesisRecord(data: ByteString,
 
   private[kinesis] def offsetString: String = {
     subSequenceNumber match {
-      case Some(definedSubSequence) => s"Offset(sequenceNumber=$sequenceNumber, subSequenceNumber=$definedSubSequence)"
+      case Some(definedSubSequence) =>
+        s"Offset(sequenceNumber=$sequenceNumber, subSequenceNumber=$definedSubSequence)"
       case None => s"Offset(sequenceNumber=$sequenceNumber)"
     }
   }
