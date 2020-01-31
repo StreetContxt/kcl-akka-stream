@@ -30,15 +30,15 @@ private[kinesis] class ShardCheckpointTracker(shardCheckpointConfig: ShardCheckp
   def nrOfInFlightRecords: Int = lock.synchronized {
     unprocessedInFlightRecords.size + processedButNotCheckpointedCount
   }
+
   def nrOfProcessedUncheckpointedRecords: Int = lock.synchronized {
     popProcessedRecords()
     processedButNotCheckpointedCount
   }
 
-  def watchForCompletion(records: Iterable[KinesisRecord]): Unit =
-    lock.synchronized {
-      unprocessedInFlightRecords ++= records
-    }
+  def watchForCompletion(records: Iterable[KinesisRecord]): Unit = lock.synchronized {
+    unprocessedInFlightRecords ++= records
+  }
 
   def shouldCheckpoint: Boolean = lock.synchronized {
     popProcessedRecords()
@@ -146,7 +146,6 @@ private[kinesis] class RecordProcessorImpl(
 
   override def shutdownRequested(shutdownRequestedInput: ShutdownRequestedInput): Unit = {
     log.info(s"Shutdown requested: $shardId")
-
     shutdown(
       ShutdownInput
         .builder()
@@ -156,7 +155,7 @@ private[kinesis] class RecordProcessorImpl(
     )
   }
 
-  def shutdown(shutdownInput: ShutdownInput): Unit = {
+  private def shutdown(shutdownInput: ShutdownInput): Unit = {
     val shutdownReason = shutdownInput.shutdownReason()
 
     shutdownReason match {

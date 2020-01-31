@@ -1,7 +1,7 @@
 # kcl-akka-stream
-Akka Streaming Source backed by Kinesis Client Library (KCL).
+Akka Streaming Source backed by Kinesis Client Library (KCL 2.x).
 
-This library combines the convenience of Akka Streams with KCL checkpoint management, failover, load-balancing,
+This library combines the convenience of Akka Streams with KCL 2.x checkpoint management, failover, load-balancing,
 and re-sharding capabilities.
 
 This library is thoroughly tested and currently used in production.
@@ -11,7 +11,7 @@ This library is thoroughly tested and currently used in production.
 
 ```
 resolvers in ThisBuild += Resolver.bintrayRepo("streetcontxt", "maven")
-libraryDependencies += "com.streetcontxt" %% "kcl-akka-stream" % "2.0.3"
+libraryDependencies += "com.streetcontxt" %% "kcl-akka-stream" % "2.1.0"
 ```
 
 
@@ -22,37 +22,27 @@ Here are two simple examples on how to initialize the Kinesis consumer and liste
 The first example shows how to process Kinesis records in at-least-once fashion:
 ```scala
 import akka.actor.ActorSystem
-import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
-import com.amazonaws.auth.AWSCredentialsProviderChain
-import com.amazonaws.services.kinesis.clientlibrary.lib.worker._
-import com.contxt.kinesis.KinesisSource
+import com.contxt.kinesis.{ConsumerConfig, KinesisSource}
+
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.util.Random
 
 object Main {
   def main(args: Array[String]): Unit = {
-    val consumerConfig = new KinesisClientLibConfiguration(
-      "atLeastOnceApp",
-      "myStream",
-      new AWSCredentialsProviderChain,
-      "kinesisWorker"
-    )
-      .withRegionName("us-east-1")
-      .withCallProcessRecordsEvenForEmptyRecordList(true)
-      .withInitialPositionInStream(InitialPositionInStream.TRIM_HORIZON)
+    val consumerConfig = ConsumerConfig("myStream", "atLeastOnceApp")
 
     case class KeyMessage(key: String, message: String, markProcessed: () => Unit)
 
     val atLeastOnceSource = KinesisSource(consumerConfig)
       .map { kinesisRecord =>
-        KeyMessage(
-          kinesisRecord.partitionKey, kinesisRecord.data.utf8String, kinesisRecord.markProcessed
-        )
+        KeyMessage(kinesisRecord.partitionKey, kinesisRecord.data.utf8String, kinesisRecord.markProcessed)
       }
       // Records may be processed out of order without affecting checkpointing.
-      .grouped(10).map(batch => Random.shuffle(batch)).mapConcat(identity)
+      .grouped(10)
+      .map(batch => Random.shuffle(batch))
+      .mapConcat(identity)
       .map { message =>
         // After a record is marked as processed, it is eligible to be checkpointed in DynamoDb.
         message.markProcessed()
@@ -60,7 +50,6 @@ object Main {
       }
 
     implicit val system = ActorSystem("Main")
-    implicit val materializer = ActorMaterializer()
     atLeastOnceSource.runWith(Sink.foreach(println))
 
     Thread.sleep(10.seconds.toMillis)
@@ -72,25 +61,15 @@ object Main {
 The second examples shows how to implement no-guarantees processing:
 ```scala
 import akka.actor.ActorSystem
-import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
-import com.amazonaws.auth.AWSCredentialsProviderChain
-import com.amazonaws.services.kinesis.clientlibrary.lib.worker._
-import com.contxt.kinesis.KinesisSource
+import com.contxt.kinesis.{ConsumerConfig, KinesisSource}
+
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
 object Main {
   def main(args: Array[String]): Unit = {
-    val consumerConfig = new KinesisClientLibConfiguration(
-      "noGuaranteesApp",
-      "myStream",
-      new AWSCredentialsProviderChain,
-      "kinesisWorker"
-    )
-      .withRegionName("us-east-1")
-      .withCallProcessRecordsEvenForEmptyRecordList(true)
-      .withInitialPositionInStream(InitialPositionInStream.TRIM_HORIZON)
+    val consumerConfig = ConsumerConfig("myStream", "noGuaranteesApp")
 
     case class KeyMessage(key: String, message: String)
 
@@ -107,7 +86,6 @@ object Main {
       }
 
     implicit val system = ActorSystem("Main")
-    implicit val materializer = ActorMaterializer()
     noGuaranteesSource.runWith(Sink.foreach(println))
 
     Thread.sleep(10.seconds.toMillis)
@@ -129,6 +107,27 @@ calling `markProcessed()`, or the steam must be terminated with an exception. If
 after failing to process a record, and not marking it as processed, then no further records can be checkpointed,
 eventually causing the system to run out of memory.
 
+## Consumer Configuration
+The Kinesis Consumer `ConsumerConfig` can be configured via HOCON configuration, which is common for Akka projects
+```hocon
+consumer {
+  application-name = "test-app" # name of the application (consumer group)
+  stream-name = "test-stream" # name of the stream to connect to
+
+  position {
+    initial = "latest" # (latest, trim-horizon, at-timestamp). defaults to latest
+    time = "" # Only set if position is at-timestamp. Supports a valid Java Date parseable datetime string
+  }
+}
+```
+
+Then configuring the consumer using `ConsumerConfig.fromConfig`.
+```scala
+ConsumerConfig.fromConfig(system.settings.config.getConfig("consumer"))
+```
+
+The `ConsumerConfig` class also has methods for accepting raw AWS SDK clients which can be configured. 
+If you require very custom configuration, this option is available.
 
 ## Amazon Licensing Restrictions
 **KCL license is not compatible with open source licenses!** See
