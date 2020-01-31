@@ -18,7 +18,7 @@ version := sys.props
   .orElse(sys.env.get("CIRCLE_TAG"))
   .flatMap {
     case versionPattern(v) => Some(v)
-    case _ => None
+    case _                 => None
   }
   .getOrElse("LOCAL-SNAPSHOT")
 

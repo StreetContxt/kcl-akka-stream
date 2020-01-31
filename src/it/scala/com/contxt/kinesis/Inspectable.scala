@@ -11,6 +11,7 @@ import software.amazon.kinesis.exceptions.ThrottlingException
 import scala.collection.JavaConverters._
 
 object Inspectable {
+
   /** Returns a Sink that collects incoming elements into a list, and whose state can be inspected at any time
     * by using the function returned as the materialized value. */
   def sink[A]: Sink[A, () => IndexedSeq[A]] = {

@@ -38,6 +38,7 @@ import scala.util.control.NonFatal
   * - If you would like to work with an open-source compatible library, [[https://kafka.apache.org/ check out Kafka]].
   */
 object KinesisSource {
+
   /** Creates a Source backed by Kinesis Consumer Library, with materialized valued of Future[Done] which completes
     * when the stream has terminated and the Kinesis worker has fully shutdown. */
   def apply(kclConfig: ConsumerConfig, config: Config = ConfigFactory.load()): Source[KinesisRecord, Future[Done]] = {
