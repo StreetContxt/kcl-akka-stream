@@ -42,8 +42,7 @@ object MessageUtil {
       val lastMessage = messages(j)
       if (lastDistinct.isEmpty || lastDistinct.get != lastMessage) {
         val restartedAt = distinct.lastIndexOf(lastMessage)
-        if (restartedAt < lastRestartedAt)
-          throw new UnexpectedMessageSequence(key, lastMessage, messages)
+        if (restartedAt < lastRestartedAt) throw new UnexpectedMessageSequence(key, lastMessage, messages)
         lastRestartedAt = restartedAt
         val reprocessedSliceCandidate = distinct.slice(restartedAt, i)
         val lastIndexOfRetrySequence = unwindRetries(reprocessedSliceCandidate, j) - 1

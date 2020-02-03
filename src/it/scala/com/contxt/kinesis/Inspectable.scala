@@ -57,8 +57,7 @@ private[kinesis] class InspectableConsumerStats extends NoopConsumerStats {
 
   override def checkpointDelayed(shardConsumerId: ShardConsumerId, e: Throwable): Unit = {
     e match {
-      case _: ThrottlingException =>
-        checkpointEventsByShardConsumer.add(shardConsumerId -> CheckpointThrottled)
+      case _: ThrottlingException => checkpointEventsByShardConsumer.add(shardConsumerId -> CheckpointThrottled)
     }
   }
 
@@ -75,8 +74,7 @@ private[kinesis] class InspectableConsumerStats extends NoopConsumerStats {
       // The first checkpoint may already be in-progress when we inspect acked checkpoints.
       val minCheckpointCountDelta = checkpointCount + 1
       val shardConsumersWithEnoughCheckpoints = currentCheckpointCounts.collect {
-        case (shardConsumer, count) if count >= minCheckpointCountDelta =>
-          shardConsumer
+        case (shardConsumer, count) if count >= minCheckpointCountDelta => shardConsumer
       }
       require(shardConsumersWithEnoughCheckpoints.size >= minNumberOfShards)
     }
@@ -96,7 +94,8 @@ private[kinesis] class InspectableConsumerStats extends NoopConsumerStats {
   }
 
   private def throttledCheckpointsCount(): Int = {
-    checkpointEventsByShardConsumer.asScala.count { case (_, event) => event == CheckpointThrottled }
+    checkpointEventsByShardConsumer.asScala
+      .count { case (_, event) => event == CheckpointThrottled }
   }
 }
 
