@@ -11,7 +11,7 @@ This library is thoroughly tested and currently used in production.
 
 ```
 resolvers in ThisBuild += Resolver.bintrayRepo("streetcontxt", "maven")
-libraryDependencies += "com.streetcontxt" %% "kcl-akka-stream" % "2.1.0"
+libraryDependencies += "com.streetcontxt" %% "kcl-akka-stream" % "3.0.0"
 ```
 
 
