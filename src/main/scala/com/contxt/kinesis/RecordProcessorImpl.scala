@@ -133,8 +133,13 @@ private[kinesis] class RecordProcessorImpl(
   }
 
   override def leaseLost(leaseLostInput: LeaseLostInput): Unit = {
-    queue.complete()
     log.info(s"Lease lost: $shardId")
+    shutdown(
+      ShutdownInput
+        .builder()
+        .shutdownReason(ShutdownReason.LEASE_LOST)
+        .build()
+    )
   }
 
   override def shardEnded(shardEndedInput: ShardEndedInput): Unit = {
