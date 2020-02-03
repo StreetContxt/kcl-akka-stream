@@ -3,9 +3,10 @@ package com.contxt.kinesis
 import akka.stream._
 import akka.stream.scaladsl._
 import akka.stream.stage._
-import scala.concurrent.{ Future, Promise }
+import scala.concurrent.{Future, Promise}
 
 private[kinesis] object MaterializerAsValue {
+
   /** A source that starts already completed, and provides a future of stream materializer as the materialized value. */
   def source[In]: Source[In, Future[Materializer]] = {
     val stage = new GraphStageWithMaterializedValue[SourceShape[In], Future[Materializer]] {
