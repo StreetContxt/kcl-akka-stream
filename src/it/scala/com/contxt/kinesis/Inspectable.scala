@@ -49,8 +49,7 @@ object Inspectable {
 
 private[kinesis] class InspectableConsumerStats extends NoopConsumerStats {
   import InspectableConsumerStats._
-  private val checkpointEventsByShardConsumer =
-    new ConcurrentLinkedQueue[(ShardConsumerId, CheckpointEvent)]
+  private val checkpointEventsByShardConsumer = new ConcurrentLinkedQueue[(ShardConsumerId, CheckpointEvent)]
 
   override def checkpointAcked(shardConsumerId: ShardConsumerId): Unit = {
     checkpointEventsByShardConsumer.add(shardConsumerId -> CheckpointAcked)
@@ -75,11 +74,10 @@ private[kinesis] class InspectableConsumerStats extends NoopConsumerStats {
       val currentCheckpointCounts = checkpointCountByShardConsumer()
       // The first checkpoint may already be in-progress when we inspect acked checkpoints.
       val minCheckpointCountDelta = checkpointCount + 1
-      val shardConsumersWithEnoughCheckpoints =
-        currentCheckpointCounts.collect {
-          case (shardConsumer, count) if count >= minCheckpointCountDelta =>
-            shardConsumer
-        }
+      val shardConsumersWithEnoughCheckpoints = currentCheckpointCounts.collect {
+        case (shardConsumer, count) if count >= minCheckpointCountDelta =>
+          shardConsumer
+      }
       require(shardConsumersWithEnoughCheckpoints.size >= minNumberOfShards)
     }
   }
@@ -98,8 +96,7 @@ private[kinesis] class InspectableConsumerStats extends NoopConsumerStats {
   }
 
   private def throttledCheckpointsCount(): Int = {
-    checkpointEventsByShardConsumer.asScala
-      .count { case (_, event) => event == CheckpointThrottled }
+    checkpointEventsByShardConsumer.asScala.count { case (_, event) => event == CheckpointThrottled }
   }
 }
 

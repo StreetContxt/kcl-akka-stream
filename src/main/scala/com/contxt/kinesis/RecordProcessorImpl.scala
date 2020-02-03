@@ -77,8 +77,7 @@ private[kinesis] class ShardCheckpointTracker(shardCheckpointConfig: ShardCheckp
   }
 
   private def popProcessedRecords(): Unit = {
-    val processedRecords =
-      unprocessedInFlightRecords.takeWhile(_.completionFuture.isCompleted)
+    val processedRecords = unprocessedInFlightRecords.takeWhile(_.completionFuture.isCompleted)
     unprocessedInFlightRecords = unprocessedInFlightRecords.drop(processedRecords.size)
     processedButNotCheckpointedCount += processedRecords.size
     lastProcessedButNotCheckpointed = processedRecords.lastOption.orElse(lastProcessedButNotCheckpointed)
@@ -124,8 +123,7 @@ private[kinesis] class RecordProcessorImpl(
       val kinesisRecords = records.map(KinesisRecord.fromMutableRecord)
       shardCheckpointTracker.watchForCompletion(kinesisRecords)
       recordCheckpointerStats()
-      if (shardCheckpointTracker.shouldCheckpoint)
-        checkpointAndHandleErrors(processRecordsInput.checkpointer())
+      if (shardCheckpointTracker.shouldCheckpoint) checkpointAndHandleErrors(processRecordsInput.checkpointer())
       if (kinesisRecords.nonEmpty) blockToEnqueueAndHandleResult(kinesisRecords)
     } catch {
       case NonFatal(e) =>
@@ -189,10 +187,9 @@ private[kinesis] class RecordProcessorImpl(
   private def blockToEnqueueAndHandleResult(kinesisRecords: IndexedSeq[KinesisRecord]): Unit = {
     try {
       kinesisRecords.foreach(consumerStats.trackRecord(shardConsumerId, _))
-      val enqueueFuture =
-        consumerStats.trackBatchEnqueue(shardConsumerId, kinesisRecords.size) {
-          queue.offer(kinesisRecords)
-        }
+      val enqueueFuture = consumerStats.trackBatchEnqueue(shardConsumerId, kinesisRecords.size) {
+        queue.offer(kinesisRecords)
+      }
       Await.result(enqueueFuture, Duration.Inf) match {
         case QueueOfferResult.Enqueued =>
         // Do nothing.
@@ -265,12 +262,10 @@ private[kinesis] class RecordProcessorImpl(
     import scala.concurrent.ExecutionContext.Implicits.global
 
     val hasStreamFailed = {
-      if (streamTerminationFuture.isCompleted)
-        Try(Await.result(streamTerminationFuture, 0.seconds)).isFailure
+      if (streamTerminationFuture.isCompleted) Try(Await.result(streamTerminationFuture, 0.seconds)).isFailure
       else false
     }
-    if (!hasStreamFailed)
-      Try(Await.result(shardCheckpointTracker.allInFlightRecordsProcessedFuture, waitDuration))
+    if (!hasStreamFailed) Try(Await.result(shardCheckpointTracker.allInFlightRecordsProcessedFuture, waitDuration))
   }
 
   private def getOffsetString(n: ExtendedSequenceNumber): String = {

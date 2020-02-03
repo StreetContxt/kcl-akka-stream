@@ -32,8 +32,7 @@ object KinesisResourceManager {
   val WorkerTerminationTimeout: Duration = 30.seconds
 
   val RegionName: String = Option(System.getenv("KINESIS_TEST_REGION")).get
-  val CredentialsProvider: DefaultCredentialsProvider =
-    DefaultCredentialsProvider.builder.build()
+  val CredentialsProvider: DefaultCredentialsProvider = DefaultCredentialsProvider.builder.build()
 
   def createStream(regionName: String, streamName: String, shardCount: Int): StreamDescription = {
     withKinesisClient(regionName) { client =>

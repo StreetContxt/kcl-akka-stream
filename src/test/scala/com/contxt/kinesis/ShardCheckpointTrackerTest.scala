@@ -165,8 +165,7 @@ class ShardCheckpointTrackerTest extends WordSpec with Matchers {
     checkpointAfterProcessingNrOfRecords = 2,
     maxWaitForCompletionOnStreamShutdown = 2.second
   )
-  private def mkCheckpointTracker() =
-    new ShardCheckpointTracker(checkpointConfig)
+  private def mkCheckpointTracker() = new ShardCheckpointTracker(checkpointConfig)
 
   private def mkRecord() = KinesisRecord(
     ByteString("testData".getBytes("UTF-8")),

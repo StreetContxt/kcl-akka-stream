@@ -32,8 +32,7 @@ object ConsumerStats {
 
   def getInstance(config: Config): ConsumerStats = {
     try {
-      val className =
-        config.getString("com.contxt.kinesis.consumer.stats-class-name")
+      val className = config.getString("com.contxt.kinesis.consumer.stats-class-name")
       Class.forName(className).newInstance().asInstanceOf[ConsumerStats]
     } catch {
       case NonFatal(e) =>

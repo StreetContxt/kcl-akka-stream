@@ -107,26 +107,20 @@ object KinesisSource {
       )
 
     val checkpointConfig = configsBuilder.checkpointConfig()
-    val coordinatorConfig =
-      config.coordinatorConfig.getOrElse(configsBuilder.coordinatorConfig())
+    val coordinatorConfig = config.coordinatorConfig.getOrElse(configsBuilder.coordinatorConfig())
     val leaseManagementConfig = config.leaseManagementConfig.getOrElse(
       configsBuilder
         .leaseManagementConfig()
         .billingMode(BillingMode.PAY_PER_REQUEST)
     )
     val lifecycleConfig = configsBuilder.lifecycleConfig()
-    val metricsConfig =
-      config.metricsConfig.getOrElse(configsBuilder.metricsConfig())
-    val processorConfig = configsBuilder
-      .processorConfig()
-      .callProcessRecordsEvenForEmptyRecordList(true)
-    val retrievalConfig =
-      config.retrievalConfig
-        .getOrElse {
-          new RetrievalConfig(config.kinesisClient, config.streamName, config.appName)
-            .retrievalSpecificConfig(new PollingConfig(config.streamName, config.kinesisClient))
-            .initialPositionInStreamExtended(config.initialPositionInStreamExtended)
-        }
+    val metricsConfig = config.metricsConfig.getOrElse(configsBuilder.metricsConfig())
+    val processorConfig = configsBuilder.processorConfig().callProcessRecordsEvenForEmptyRecordList(true)
+    val retrievalConfig = config.retrievalConfig.getOrElse {
+      new RetrievalConfig(config.kinesisClient, config.streamName, config.appName)
+        .retrievalSpecificConfig(new PollingConfig(config.streamName, config.kinesisClient))
+        .initialPositionInStreamExtended(config.initialPositionInStreamExtended)
+    }
 
     new ManagedKinesisWorker(
       new Scheduler(
@@ -148,15 +142,13 @@ object KinesisSource {
       streamKillSwitch: KillSwitch,
       streamTerminationFuture: Future[Done]
   ): Future[Done] = {
-    implicit val blockingContext: ExecutionContext =
-      BlockingContext.KinesisWorkersSharedContext
+    implicit val blockingContext: ExecutionContext = BlockingContext.KinesisWorkersSharedContext
     val workerShutdownPromise = Promise[Done]
     Future {
       try {
         val worker = Try(workerFactory(recordProcessorFactory, kclConfig))
         streamTerminationFuture.onComplete { _ =>
-          val workerShutdownFuture =
-            Future(worker.get.shutdownAndWait()).map(_ => Done)
+          val workerShutdownFuture = Future(worker.get.shutdownAndWait()).map(_ => Done)
           workerShutdownPromise.completeWith(workerShutdownFuture)
         }
         worker.get.run() // This call hijacks the thread.

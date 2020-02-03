@@ -98,10 +98,8 @@ object ConsumerConfig {
       .getOrElse(latestPos)
 
     val kinesisClient = Option(kac).getOrElse(KinesisClientUtil.createKinesisAsyncClient(KinesisAsyncClient.builder()))
-    val dynamoClient =
-      Option(dac).getOrElse(DynamoDbAsyncClient.builder.build())
-    val cloudWatchClient =
-      Option(cwac).getOrElse(CloudWatchAsyncClient.builder.build())
+    val dynamoClient = Option(dac).getOrElse(DynamoDbAsyncClient.builder.build())
+    val cloudWatchClient = Option(cwac).getOrElse(CloudWatchAsyncClient.builder.build())
 
     ConsumerConfig(streamName, name, generateWorkerId(), kinesisClient, dynamoClient, cloudWatchClient, streamPosition)
   }

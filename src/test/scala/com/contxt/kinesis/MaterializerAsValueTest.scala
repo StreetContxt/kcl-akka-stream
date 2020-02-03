@@ -27,8 +27,7 @@ class MaterializerAsValueTest
       }
 
       "return a future of materializer as the materialized value" in {
-        val materializerFuture =
-          MaterializerAsValue.source[Int].to(Sink.seq).run
+        val materializerFuture = MaterializerAsValue.source[Int].to(Sink.seq).run
         val liftedMaterializer = Await.result(materializerFuture, awaitTimeout)
         liftedMaterializer shouldBe materializer
       }
