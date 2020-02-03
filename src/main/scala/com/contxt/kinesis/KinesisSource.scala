@@ -220,7 +220,7 @@ private[kinesis] object BlockingContext {
   }
 
   private def nextThreadName(prefix: String): String = {
-    f"{prefix}_${threadId.getAndIncrement()}%04d"
+    f"${prefix}_${threadId.getAndIncrement()}%04d"
   }
 
   private val uncaughtExceptionHandler = new UncaughtExceptionHandler {
