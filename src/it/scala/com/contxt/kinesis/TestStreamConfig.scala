@@ -16,13 +16,13 @@ import software.amazon.kinesis.retrieval.polling.PollingConfig
 import scala.concurrent.duration._
 
 case class TestStreamConfig(
-  regionName: String,
-  streamName: String,
-  applicationName: String,
-  credentialsProvider: AwsCredentialsProvider,
-  maxResultsPerGetRecordRequest: Int = 1000,
-  idleTimeBetweenGetRecords: Duration = 1.second,
-  checkpointAfterCompletingNrOfRecords: Int = 200
+    regionName: String,
+    streamName: String,
+    applicationName: String,
+    credentialsProvider: AwsCredentialsProvider,
+    maxResultsPerGetRecordRequest: Int = 1000,
+    idleTimeBetweenGetRecords: Duration = 1.second,
+    checkpointAfterCompletingNrOfRecords: Int = 200
 ) {
   val shardCheckpointConfig = ShardCheckpointConfig(
     checkpointPeriod = 2.seconds,

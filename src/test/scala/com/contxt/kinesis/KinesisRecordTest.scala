@@ -58,7 +58,6 @@ class KinesisRecordTest extends WordSpec with Matchers {
           .sequenceNumber(sequenceNumber)
           .approximateArrivalTimestamp(timestamp)
           .build()
-
         def setUserRecordField(fieldName: String, value: Any): Unit = {
           val field = userRecord.getClass.getDeclaredField(fieldName)
           field.setAccessible(true)

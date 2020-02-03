@@ -266,8 +266,8 @@ class KinesisSourceTest
   }
 
   private def assertRebalancingTestConditions(
-    receivedByConsumer1: IndexedSeq[KeyAndMessage],
-    receivedByConsumer2: IndexedSeq[KeyAndMessage]
+      receivedByConsumer1: IndexedSeq[KeyAndMessage],
+      receivedByConsumer2: IndexedSeq[KeyAndMessage]
   ): Unit = {
     val receivedByConsumer1Only = receivedByConsumer1.toSet -- receivedByConsumer2.toSet
     val receivedByConsumer2Only = receivedByConsumer2.toSet -- receivedByConsumer1.toSet

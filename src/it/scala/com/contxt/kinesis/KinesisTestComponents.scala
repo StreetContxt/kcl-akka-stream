@@ -30,9 +30,9 @@ trait KinesisTestComponents {
   }
 
   protected def messageSource(
-    keyCount: Int,
-    messageIntervalPerKey: FiniteDuration,
-    keyPrefix: String = "key"
+      keyCount: Int,
+      messageIntervalPerKey: FiniteDuration,
+      keyPrefix: String = "key"
   ): Source[KeyAndMessage, NotUsed] = {
     require(keyCount >= 2)
     def mkKey(i: Int) = f"${keyPrefix}_$i%03d"
@@ -51,7 +51,7 @@ trait KinesisTestComponents {
   }
 
   protected def withConsumerSource[A](
-    workerId: String
+      workerId: String
   )(closure: (Source[KinesisRecord, NotUsed], InspectableConsumerStats) => A)(implicit config: TestStreamConfig): A = {
     val consumerStats = new InspectableConsumerStats
     val (consumerSource, materializationFuture) = liftMaterializedValue {
@@ -73,7 +73,7 @@ trait KinesisTestComponents {
   }
 
   protected def runKinesisSourceWithInspection(
-    kinesisSource: Source[KinesisRecord, NotUsed]
+      kinesisSource: Source[KinesisRecord, NotUsed]
   ): () => IndexedSeq[KeyAndMessage] = {
     kinesisSource
       .via(markRecordsAsProcessed)

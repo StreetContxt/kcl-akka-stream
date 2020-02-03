@@ -15,18 +15,18 @@ import software.amazon.kinesis.metrics.MetricsConfig
 import software.amazon.kinesis.retrieval.RetrievalConfig
 
 case class ConsumerConfig(
-  streamName: String,
-  appName: String,
-  workerId: String,
-  kinesisClient: KinesisAsyncClient,
-  dynamoClient: DynamoDbAsyncClient,
-  cloudwatchClient: CloudWatchAsyncClient,
-  initialPositionInStreamExtended: InitialPositionInStreamExtended =
-    InitialPositionInStreamExtended.newInitialPosition(InitialPositionInStream.LATEST),
-  coordinatorConfig: Option[CoordinatorConfig] = None,
-  leaseManagementConfig: Option[LeaseManagementConfig] = None,
-  metricsConfig: Option[MetricsConfig] = None,
-  retrievalConfig: Option[RetrievalConfig] = None
+    streamName: String,
+    appName: String,
+    workerId: String,
+    kinesisClient: KinesisAsyncClient,
+    dynamoClient: DynamoDbAsyncClient,
+    cloudwatchClient: CloudWatchAsyncClient,
+    initialPositionInStreamExtended: InitialPositionInStreamExtended =
+      InitialPositionInStreamExtended.newInitialPosition(InitialPositionInStream.LATEST),
+    coordinatorConfig: Option[CoordinatorConfig] = None,
+    leaseManagementConfig: Option[LeaseManagementConfig] = None,
+    metricsConfig: Option[MetricsConfig] = None,
+    retrievalConfig: Option[RetrievalConfig] = None
 ) {
   def withInitialStreamPosition(position: InitialPositionInStream): ConsumerConfig =
     this.copy(initialPositionInStreamExtended = InitialPositionInStreamExtended.newInitialPosition(position))
@@ -60,16 +60,16 @@ object ConsumerConfig {
   }
 
   def withNames(
-    streamName: String,
-    appName: String
+      streamName: String,
+      appName: String
   )(implicit kac: KinesisAsyncClient, dac: DynamoDbAsyncClient, cwac: CloudWatchAsyncClient): ConsumerConfig =
     ConsumerConfig(streamName, appName, generateWorkerId(), kac, dac, cwac)
 
   def fromConfig(config: Config)(
-    implicit
-    kac: KinesisAsyncClient = null,
-    dac: DynamoDbAsyncClient = null,
-    cwac: CloudWatchAsyncClient = null
+      implicit
+      kac: KinesisAsyncClient = null,
+      dac: DynamoDbAsyncClient = null,
+      cwac: CloudWatchAsyncClient = null
   ): ConsumerConfig = {
     def getOpt[A](key: String, lookup: String => A): Option[A] =
       if (config.hasPath(key)) Some(lookup(key)) else None

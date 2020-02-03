@@ -15,30 +15,29 @@ object Inspectable {
   /** Returns a Sink that collects incoming elements into a list, and whose state can be inspected at any time
     * by using the function returned as the materialized value. */
   def sink[A]: Sink[A, () => IndexedSeq[A]] = {
-    val stage =
-      new GraphStageWithMaterializedValue[SinkShape[A], ConcurrentLinkedQueue[A]] {
-        val in: Inlet[A] = Inlet("InspectableSink")
-        override val shape: SinkShape[A] = SinkShape(in)
+    val stage = new GraphStageWithMaterializedValue[SinkShape[A], ConcurrentLinkedQueue[A]] {
+      val in: Inlet[A] = Inlet("InspectableSink")
+      override val shape: SinkShape[A] = SinkShape(in)
 
-        override def createLogicAndMaterializedValue(
+      override def createLogicAndMaterializedValue(
           inheritedAttributes: Attributes
-        ): (GraphStageLogic, ConcurrentLinkedQueue[A]) = {
-          val nonBlockingQueue = new ConcurrentLinkedQueue[A]
+      ): (GraphStageLogic, ConcurrentLinkedQueue[A]) = {
+        val nonBlockingQueue = new ConcurrentLinkedQueue[A]
 
-          val logic = new GraphStageLogic(shape) {
-            override def preStart(): Unit = pull(in)
+        val logic = new GraphStageLogic(shape) {
+          override def preStart(): Unit = pull(in)
 
-            setHandler(in, new InHandler {
-              override def onPush(): Unit = {
-                nonBlockingQueue.add(grab(in))
-                pull(in)
-              }
-            })
-          }
-
-          (logic, nonBlockingQueue)
+          setHandler(in, new InHandler {
+            override def onPush(): Unit = {
+              nonBlockingQueue.add(grab(in))
+              pull(in)
+            }
+          })
         }
+
+        (logic, nonBlockingQueue)
       }
+    }
 
     Sink
       .fromGraph(stage)
@@ -69,7 +68,7 @@ private[kinesis] class InspectableConsumerStats extends NoopConsumerStats {
   }
 
   def waitForNrOfCheckpointsPerShard(minNumberOfShards: Int, checkpointCount: Int)(
-    implicit patienceConfig: PatienceConfig
+      implicit patienceConfig: PatienceConfig
   ): Unit = {
     checkpointEventsByShardConsumer.clear()
     eventually {

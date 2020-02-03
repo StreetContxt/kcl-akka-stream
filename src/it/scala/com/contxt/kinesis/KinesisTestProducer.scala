@@ -27,8 +27,8 @@ object KinesisTestProducer {
   }
 
   def sink(
-    streamName: String,
-    producerConfig: KinesisProducerConfiguration
+      streamName: String,
+      producerConfig: KinesisProducerConfiguration
   ): Sink[(String, String), Future[Seq[(String, String)]]] = {
     import scala.concurrent.ExecutionContext.Implicits.global
     val producer = KinesisTestProducer(streamName, producerConfig)

@@ -5,9 +5,22 @@ import org.scalatest.concurrent.Eventually._
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider
 import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient
-import software.amazon.awssdk.services.dynamodb.model.{DeleteTableRequest, DescribeTableRequest, ProvisionedThroughput, TableStatus, UpdateTableRequest}
+import software.amazon.awssdk.services.dynamodb.model.{
+  DeleteTableRequest,
+  DescribeTableRequest,
+  ProvisionedThroughput,
+  TableStatus,
+  UpdateTableRequest
+}
 import software.amazon.awssdk.services.kinesis.KinesisClient
-import software.amazon.awssdk.services.kinesis.model.{CreateStreamRequest, DeleteStreamRequest, DescribeStreamRequest, ScalingType, StreamDescription, UpdateShardCountRequest}
+import software.amazon.awssdk.services.kinesis.model.{
+  CreateStreamRequest,
+  DeleteStreamRequest,
+  DescribeStreamRequest,
+  ScalingType,
+  StreamDescription,
+  UpdateShardCountRequest
+}
 
 import scala.concurrent.duration._
 import scala.util.control.NonFatal

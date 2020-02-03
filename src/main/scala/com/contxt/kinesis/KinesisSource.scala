@@ -50,18 +50,18 @@ object KinesisSource {
   /** Creates a Source backed by Kinesis Consumer Library, with materialized valued of Future[Done] which completes
     * when the stream has terminated and the Kinesis worker has fully shutdown. */
   def apply(
-    kclConfig: ConsumerConfig,
-    shardCheckpointConfig: ShardCheckpointConfig,
-    consumerStats: ConsumerStats
+      kclConfig: ConsumerConfig,
+      shardCheckpointConfig: ShardCheckpointConfig,
+      consumerStats: ConsumerStats
   ): Source[KinesisRecord, Future[Done]] = {
     KinesisSource(createKclWorker, kclConfig, shardCheckpointConfig, consumerStats)
   }
 
   private[kinesis] def apply(
-    workerFactory: (ShardRecordProcessorFactory, ConsumerConfig) => ManagedWorker,
-    kclConfig: ConsumerConfig,
-    shardCheckpointConfig: ShardCheckpointConfig,
-    consumerStats: ConsumerStats
+      workerFactory: (ShardRecordProcessorFactory, ConsumerConfig) => ManagedWorker,
+      kclConfig: ConsumerConfig,
+      shardCheckpointConfig: ShardCheckpointConfig,
+      consumerStats: ConsumerStats
   ): Source[KinesisRecord, Future[Done]] = {
     val kinesisAppId = KinesisAppId(kclConfig.streamName, kclConfig.appName)
     MergeHub
@@ -92,8 +92,8 @@ object KinesisSource {
   }
 
   private[kinesis] def createKclWorker(
-    recordProcessorFactory: ShardRecordProcessorFactory,
-    config: ConsumerConfig
+      recordProcessorFactory: ShardRecordProcessorFactory,
+      config: ConsumerConfig
   ): ManagedWorker = {
     val configsBuilder =
       new ConfigsBuilder(
@@ -142,11 +142,11 @@ object KinesisSource {
   }
 
   private def createAndStartKclWorker(
-    workerFactory: (ShardRecordProcessorFactory, ConsumerConfig) => ManagedWorker,
-    recordProcessorFactory: ShardRecordProcessorFactory,
-    kclConfig: ConsumerConfig,
-    streamKillSwitch: KillSwitch,
-    streamTerminationFuture: Future[Done]
+      workerFactory: (ShardRecordProcessorFactory, ConsumerConfig) => ManagedWorker,
+      recordProcessorFactory: ShardRecordProcessorFactory,
+      kclConfig: ConsumerConfig,
+      streamKillSwitch: KillSwitch,
+      streamTerminationFuture: Future[Done]
   ): Future[Done] = {
     implicit val blockingContext: ExecutionContext =
       BlockingContext.KinesisWorkersSharedContext
@@ -182,12 +182,12 @@ private[kinesis] class ManagedKinesisWorker(private val worker: Scheduler) exten
 }
 
 private[kinesis] class RecordProcessorFactoryImpl(
-  kinesisAppId: KinesisAppId,
-  streamKillSwitch: KillSwitch,
-  streamTerminationFuture: Future[Done],
-  mergeSink: Sink[KinesisRecord, NotUsed],
-  shardCheckpointConfig: ShardCheckpointConfig,
-  consumerStats: ConsumerStats
+    kinesisAppId: KinesisAppId,
+    streamKillSwitch: KillSwitch,
+    streamTerminationFuture: Future[Done],
+    mergeSink: Sink[KinesisRecord, NotUsed],
+    shardCheckpointConfig: ShardCheckpointConfig,
+    consumerStats: ConsumerStats
 )(implicit materializer: Materializer)
     extends ShardRecordProcessorFactory {
   override def shardRecordProcessor(): ShardRecordProcessor = {

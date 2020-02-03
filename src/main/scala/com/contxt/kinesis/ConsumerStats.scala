@@ -17,7 +17,7 @@ trait ConsumerStats {
   def trackRecord(shardConsumerId: ShardConsumerId, record: KinesisRecord): Unit
 
   def trackBatchEnqueue(shardConsumerId: ShardConsumerId, batchSize: Int)(
-    closure: => Future[QueueOfferResult]
+      closure: => Future[QueueOfferResult]
   ): Future[QueueOfferResult]
 
   def recordNrOfInFlightRecords(shardConsumerId: ShardConsumerId, totalCount: Int): Unit
@@ -51,7 +51,7 @@ class NoopConsumerStats extends ConsumerStats {
 
   def trackRecord(shardConsumerId: ShardConsumerId, record: KinesisRecord): Unit = {}
   def trackBatchEnqueue(shardConsumerId: ShardConsumerId, batchSize: Int)(
-    closure: => Future[QueueOfferResult]
+      closure: => Future[QueueOfferResult]
   ): Future[QueueOfferResult] = closure
 
   def recordNrOfInFlightRecords(shardConsumerId: ShardConsumerId, totalCount: Int): Unit = {}

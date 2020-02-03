@@ -7,7 +7,13 @@ import akka.stream.scaladsl.SourceQueueWithComplete
 import akka.stream.{KillSwitch, QueueOfferResult}
 import org.slf4j.LoggerFactory
 import software.amazon.kinesis.exceptions.{KinesisClientLibDependencyException, ShutdownException, ThrottlingException}
-import software.amazon.kinesis.lifecycle.events.{InitializationInput, LeaseLostInput, ProcessRecordsInput, ShardEndedInput, ShutdownRequestedInput}
+import software.amazon.kinesis.lifecycle.events.{
+  InitializationInput,
+  LeaseLostInput,
+  ProcessRecordsInput,
+  ShardEndedInput,
+  ShutdownRequestedInput
+}
 import software.amazon.kinesis.lifecycle.{ShutdownInput, ShutdownReason}
 import software.amazon.kinesis.processor.{RecordProcessorCheckpointer, ShardRecordProcessor}
 import software.amazon.kinesis.retrieval.kpl.ExtendedSequenceNumber
@@ -92,12 +98,12 @@ private[kinesis] class ShardCheckpointTracker(shardCheckpointConfig: ShardCheckp
 }
 
 private[kinesis] class RecordProcessorImpl(
-  kinesisAppId: KinesisAppId,
-  streamKillSwitch: KillSwitch,
-  streamTerminationFuture: Future[Done],
-  queue: SourceQueueWithComplete[IndexedSeq[KinesisRecord]],
-  shardCheckpointConfig: ShardCheckpointConfig,
-  consumerStats: ConsumerStats
+    kinesisAppId: KinesisAppId,
+    streamKillSwitch: KillSwitch,
+    streamTerminationFuture: Future[Done],
+    queue: SourceQueueWithComplete[IndexedSeq[KinesisRecord]],
+    shardCheckpointConfig: ShardCheckpointConfig,
+    consumerStats: ConsumerStats
 ) extends ShardRecordProcessor {
   private val log = LoggerFactory.getLogger(getClass)
 
