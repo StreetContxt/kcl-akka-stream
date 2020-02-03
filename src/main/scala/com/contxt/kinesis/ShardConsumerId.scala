@@ -1,10 +1,10 @@
 package com.contxt.kinesis
 
 case class ShardConsumerId(
-  regionName: String,
-  streamName: String,
-  applicationName: String,
-  shardId: String
+    regionName: String,
+    streamName: String,
+    applicationName: String,
+    shardId: String
 )
 
 object ShardConsumerId {

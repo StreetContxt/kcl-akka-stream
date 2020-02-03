@@ -2,22 +2,24 @@ package com.contxt.kinesis
 
 import akka.Done
 import akka.actor.ActorSystem
-import akka.stream.{ ActorMaterializer, KillSwitches, Materializer, UniqueKillSwitch }
-import akka.stream.scaladsl.{ Keep, Sink, Source }
+import akka.stream.{ActorMaterializer, KillSwitches, Materializer, UniqueKillSwitch}
+import akka.stream.scaladsl.{Keep, Sink, Source}
 import akka.testkit.TestKit
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain
 import com.amazonaws.services.kinesis.clientlibrary.interfaces.v2.IRecordProcessorFactory
 import com.amazonaws.services.kinesis.clientlibrary.lib.worker.KinesisClientLibConfiguration
 import org.scalatest.concurrent.Eventually
-import org.scalatest.{ BeforeAndAfterAll, Matchers, WordSpecLike }
-import scala.concurrent.{ Await, Future, Promise }
+import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
+import scala.concurrent.{Await, Future, Promise}
 import scala.concurrent.duration._
-import scala.util.{ Failure, Try }
+import scala.util.{Failure, Try}
 
 class KinesisSourceFactoryTest
-  extends TestKit(ActorSystem("TestSystem"))
-  with WordSpecLike with BeforeAndAfterAll with Matchers with Eventually
-{
+    extends TestKit(ActorSystem("TestSystem"))
+    with WordSpecLike
+    with BeforeAndAfterAll
+    with Matchers
+    with Eventually {
   override protected def afterAll: Unit = TestKit.shutdownActorSystem(system)
   protected implicit val materializer: Materializer = ActorMaterializer()
   private val awaitDuration = 5.seconds
@@ -127,8 +129,7 @@ class KinesisSourceFactoryTest
       "streamName1",
       new DefaultAWSCredentialsProviderChain(),
       "workerId1"
-    )
-      .withCallProcessRecordsEvenForEmptyRecordList(true)
+    ).withCallProcessRecordsEvenForEmptyRecordList(true)
   }
 
   class MockWorker extends ManagedWorker {

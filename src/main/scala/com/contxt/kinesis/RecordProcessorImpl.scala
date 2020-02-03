@@ -1,17 +1,22 @@
 package com.contxt.kinesis
 
 import akka.Done
-import akka.stream.{ KillSwitch, QueueOfferResult }
+import akka.stream.{KillSwitch, QueueOfferResult}
 import akka.stream.scaladsl.SourceQueueWithComplete
-import com.amazonaws.services.kinesis.clientlibrary.exceptions.{ KinesisClientLibDependencyException, KinesisClientLibRetryableException, ShutdownException, ThrottlingException }
+import com.amazonaws.services.kinesis.clientlibrary.exceptions.{
+  KinesisClientLibDependencyException,
+  KinesisClientLibRetryableException,
+  ShutdownException,
+  ThrottlingException
+}
 import com.amazonaws.services.kinesis.clientlibrary.interfaces.IRecordProcessorCheckpointer
-import com.amazonaws.services.kinesis.clientlibrary.interfaces.v2.{ IRecordProcessor, IShutdownNotificationAware }
+import com.amazonaws.services.kinesis.clientlibrary.interfaces.v2.{IRecordProcessor, IShutdownNotificationAware}
 import com.amazonaws.services.kinesis.clientlibrary.lib.worker.ShutdownReason
 import com.amazonaws.services.kinesis.clientlibrary.types._
 import java.time.ZonedDateTime
 import org.slf4j.LoggerFactory
 import scala.collection.immutable.Queue
-import scala.concurrent.{ Await, ExecutionContext, Future }
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration._
 import scala.util.Try
 import scala.util.control.NonFatal
@@ -41,7 +46,7 @@ private[kinesis] class ShardCheckpointTracker(shardCheckpointConfig: ShardCheckp
     popProcessedRecords()
 
     processedButNotCheckpointedCount >= shardCheckpointConfig.checkpointAfterProcessingNrOfRecords ||
-      durationSinceLastCheckpoint() >= shardCheckpointConfig.checkpointPeriod
+    durationSinceLastCheckpoint() >= shardCheckpointConfig.checkpointPeriod
   }
 
   def checkpointLastProcessedRecord(checkpointLogic: KinesisRecord => Unit): Unit = lock.synchronized {
@@ -51,8 +56,7 @@ private[kinesis] class ShardCheckpointTracker(shardCheckpointConfig: ShardCheckp
       try {
         checkpointLogic(kinesisRecord)
         lastProcessedButNotCheckpointed = None
-      }
-      finally {
+      } finally {
         clearCheckpointTriggers()
       }
     }
@@ -86,13 +90,14 @@ private[kinesis] class ShardCheckpointTracker(shardCheckpointConfig: ShardCheckp
 }
 
 private[kinesis] class RecordProcessorImpl(
-  kinesisAppId: KinesisAppId,
-  streamKillSwitch: KillSwitch,
-  streamTerminationFuture: Future[Done],
-  queue: SourceQueueWithComplete[IndexedSeq[KinesisRecord]],
-  shardCheckpointConfig: ShardCheckpointConfig,
-  consumerStats: ConsumerStats
-) extends IRecordProcessor with IShutdownNotificationAware {
+    kinesisAppId: KinesisAppId,
+    streamKillSwitch: KillSwitch,
+    streamTerminationFuture: Future[Done],
+    queue: SourceQueueWithComplete[IndexedSeq[KinesisRecord]],
+    shardCheckpointConfig: ShardCheckpointConfig,
+    consumerStats: ConsumerStats
+) extends IRecordProcessor
+    with IShutdownNotificationAware {
   private val log = LoggerFactory.getLogger(getClass)
 
   private val shardCheckpointTracker = new ShardCheckpointTracker(shardCheckpointConfig)
@@ -114,8 +119,7 @@ private[kinesis] class RecordProcessorImpl(
       recordCheckpointerStats()
       if (shardCheckpointTracker.shouldCheckpoint) checkpointAndHandleErrors(processRecordsInput.getCheckpointer)
       if (kinesisRecords.nonEmpty) blockToEnqueueAndHandleResult(kinesisRecords)
-    }
-    catch {
+    } catch {
       case NonFatal(e) =>
         log.error("Unhandled exception in `processRecords()`, failing the streaming...", e)
         streamKillSwitch.abort(e)
@@ -127,7 +131,7 @@ private[kinesis] class RecordProcessorImpl(
 
     shutdownReason match {
       case ShutdownReason.ZOMBIE =>
-        // Do nothing.
+      // Do nothing.
 
       case ShutdownReason.TERMINATE =>
         waitForInFlightRecordsOrTermination()
@@ -169,9 +173,11 @@ private[kinesis] class RecordProcessorImpl(
         // Do nothing.
 
         case QueueOfferResult.Dropped =>
-          streamKillSwitch.abort(new AssertionError(
-            "RecordProcessor source queue must use `OverflowStrategy.Backpressure`."
-          ))
+          streamKillSwitch.abort(
+            new AssertionError(
+              "RecordProcessor source queue must use `OverflowStrategy.Backpressure`."
+            )
+          )
 
         case QueueOfferResult.Failure(e) =>
           streamKillSwitch.abort(e)
@@ -189,8 +195,7 @@ private[kinesis] class RecordProcessorImpl(
         checkpointer.checkpoint()
         consumerStats.checkpointShardEndAcked(shardConsumerId)
         log.info(s"Successfully checkpointed $shardConsumerId at SHARD_END.")
-      }
-      else {
+      } else {
         shardCheckpointTracker.checkpointLastProcessedRecord { kinesisRecord =>
           val seqNumber = kinesisRecord.sequenceNumber
           val subSeqNumber = kinesisRecord.subSequenceNumber.getOrElse(0L)
@@ -199,12 +204,11 @@ private[kinesis] class RecordProcessorImpl(
           log.info(s"Successfully checkpointed $shardConsumerId at ${kinesisRecord.offsetString}.")
         }
       }
-    }
-    catch {
+    } catch {
       case e: ShutdownException =>
-        // Do nothing.
+      // Do nothing.
 
-      case e@(_: ThrottlingException | _: KinesisClientLibDependencyException) =>
+      case e @ (_: ThrottlingException | _: KinesisClientLibDependencyException) =>
         consumerStats.checkpointDelayed(shardConsumerId, e)
         log.error(s"Failed to checkpoint $shardConsumerId, will retry later.", e)
 
@@ -217,19 +221,24 @@ private[kinesis] class RecordProcessorImpl(
 
   private def recordCheckpointerStats(): Unit = {
     consumerStats.recordNrOfInFlightRecords(
-      shardConsumerId, shardCheckpointTracker.nrOfInFlightRecords
+      shardConsumerId,
+      shardCheckpointTracker.nrOfInFlightRecords
     )
     consumerStats.recordNrOfProcessedUncheckpointedRecords(
-      shardConsumerId, shardCheckpointTracker.nrOfProcessedUncheckpointedRecords
+      shardConsumerId,
+      shardCheckpointTracker.nrOfProcessedUncheckpointedRecords
     )
   }
 
   private def waitForInFlightRecordsOrTermination(): Unit = {
     import scala.concurrent.ExecutionContext.Implicits.global
 
-    val allProcessedOrTermination = Future.firstCompletedOf(Seq(
-      shardCheckpointTracker.allInFlightRecordsProcessedFuture, streamTerminationFuture
-    ))
+    val allProcessedOrTermination = Future.firstCompletedOf(
+      Seq(
+        shardCheckpointTracker.allInFlightRecordsProcessedFuture,
+        streamTerminationFuture
+      )
+    )
     Try(Await.result(allProcessedOrTermination, Duration.Inf))
   }
 

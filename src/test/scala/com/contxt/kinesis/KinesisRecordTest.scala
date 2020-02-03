@@ -2,11 +2,11 @@ package com.contxt.kinesis
 
 import akka.util.ByteString
 import com.amazonaws.services.kinesis.clientlibrary.types.UserRecord
-import com.amazonaws.services.kinesis.model.{ EncryptionType, Record }
+import com.amazonaws.services.kinesis.model.{EncryptionType, Record}
 import java.nio.ByteBuffer
 import java.time.Instant
 import java.util.Date
-import org.scalatest.{ Matchers, WordSpec }
+import org.scalatest.{Matchers, WordSpec}
 
 class KinesisRecordTest extends WordSpec with Matchers {
   "KinesisRecord" when {
@@ -18,12 +18,13 @@ class KinesisRecordTest extends WordSpec with Matchers {
         val timestamp = Instant.now()
         val encryptionType = EncryptionType.KMS.toString
 
-        val kinesisRecord = KinesisRecord.fromMutableRecord(new Record()
-          .withData(ByteBuffer.wrap(data))
-          .withPartitionKey(partitionKey)
-          .withSequenceNumber(sequenceNumber)
-          .withApproximateArrivalTimestamp(Date.from(timestamp))
-          .withEncryptionType(encryptionType)
+        val kinesisRecord = KinesisRecord.fromMutableRecord(
+          new Record()
+            .withData(ByteBuffer.wrap(data))
+            .withPartitionKey(partitionKey)
+            .withSequenceNumber(sequenceNumber)
+            .withApproximateArrivalTimestamp(Date.from(timestamp))
+            .withEncryptionType(encryptionType)
         )
         val expected = KinesisRecord(
           ByteString(data),
@@ -49,11 +50,12 @@ class KinesisRecordTest extends WordSpec with Matchers {
         val timestamp = Instant.now()
         val encryptionType = EncryptionType.NONE.toString
 
-        val userRecord = new UserRecord(new Record()
-          .withData(ByteBuffer.wrap(data))
-          .withPartitionKey(partitionKey)
-          .withSequenceNumber(sequenceNumber)
-          .withApproximateArrivalTimestamp(Date.from(timestamp))
+        val userRecord = new UserRecord(
+          new Record()
+            .withData(ByteBuffer.wrap(data))
+            .withPartitionKey(partitionKey)
+            .withSequenceNumber(sequenceNumber)
+            .withApproximateArrivalTimestamp(Date.from(timestamp))
         )
         def setUserRecordField(fieldName: String, value: Any): Unit = {
           val field = userRecord.getClass.getDeclaredField(fieldName)
