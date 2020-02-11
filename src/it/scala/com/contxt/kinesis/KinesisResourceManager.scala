@@ -156,7 +156,7 @@ object KinesisResourceManager {
     println("Waiting for " + tableName + " to become ACTIVE...")
     val startTime = System.currentTimeMillis
     val endTime = startTime + 10.minutes.toMillis
-    while ({System.currentTimeMillis < endTime}) {
+    while ({ System.currentTimeMillis < endTime }) {
       Thread.sleep(20.seconds.toMillis)
       try {
         val table = dynamoDb
