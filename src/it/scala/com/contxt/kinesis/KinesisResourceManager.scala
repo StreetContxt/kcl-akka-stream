@@ -155,11 +155,9 @@ object KinesisResourceManager {
   private def waitForTableToBecomeAvailable(tableName: String, dynamoDb: DynamoDbClient): Unit = {
     println("Waiting for " + tableName + " to become ACTIVE...")
     val startTime = System.currentTimeMillis
-    val endTime = startTime + (10 * 60 * 1000)
-    while ({
-      System.currentTimeMillis < endTime
-    }) {
-      Thread.sleep(1000 * 20)
+    val endTime = startTime + 10.minutes.toMillis
+    while ({System.currentTimeMillis < endTime}) {
+      Thread.sleep(20.seconds.toMillis)
       try {
         val table = dynamoDb
           .describeTable(DescribeTableRequest.builder().tableName(tableName).build())

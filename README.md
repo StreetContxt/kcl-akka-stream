@@ -110,7 +110,7 @@ eventually causing the system to run out of memory.
 ## Consumer Configuration
 The Kinesis Consumer `ConsumerConfig` can be configured via HOCON configuration, which is common for Akka projects
 ```hocon
-consumer {
+kinesis-consumer {
   application-name = "test-app" # name of the application (consumer group)
   stream-name = "test-stream" # name of the stream to connect to
 
@@ -123,7 +123,7 @@ consumer {
 
 Then configuring the consumer using `ConsumerConfig.fromConfig`.
 ```scala
-ConsumerConfig.fromConfig(system.settings.config.getConfig("consumer"))
+ConsumerConfig.fromConfig(system.settings.config.getConfig("kinesis-consumer"))
 ```
 
 The `ConsumerConfig` class also has methods for accepting raw AWS SDK clients which can be configured. 
