@@ -1,4 +1,7 @@
 # kcl-akka-stream
+[![CircleCI](https://circleci.com/gh/StreetContxt/kcl-akka-stream/tree/master.svg?style=shield)](https://circleci.com/gh/StreetContxt/kcl-akka-stream/tree/master)
+[![Bintray](https://img.shields.io/bintray/v/streetcontxt/maven/kcl-akka-stream)](https://bintray.com/streetcontxt/maven/kcl-akka-stream/_latestVersion)
+
 Akka Streaming Source backed by Kinesis Client Library (KCL).
 
 This library combines the convenience of Akka Streams with KCL checkpoint management, failover, load-balancing,
@@ -11,7 +14,7 @@ This library is thoroughly tested and currently used in production.
 
 ```
 resolvers in ThisBuild += Resolver.bintrayRepo("streetcontxt", "maven")
-libraryDependencies += "com.streetcontxt" %% "kcl-akka-stream" % "2.0.3"
+libraryDependencies += "com.streetcontxt" %% "kcl-akka-stream" % "2.2.0"
 ```
 
 
@@ -22,7 +25,7 @@ Here are two simple examples on how to initialize the Kinesis consumer and liste
 The first example shows how to process Kinesis records in at-least-once fashion:
 ```scala
 import akka.actor.ActorSystem
-import akka.stream.ActorMaterializer
+import akka.stream.Materializer
 import akka.stream.scaladsl.Sink
 import com.amazonaws.auth.AWSCredentialsProviderChain
 import com.amazonaws.services.kinesis.clientlibrary.lib.worker._
@@ -60,7 +63,7 @@ object Main {
       }
 
     implicit val system = ActorSystem("Main")
-    implicit val materializer = ActorMaterializer()
+    implicit val materializer = Materializer(system)
     atLeastOnceSource.runWith(Sink.foreach(println))
 
     Thread.sleep(10.seconds.toMillis)
@@ -72,7 +75,7 @@ object Main {
 The second examples shows how to implement no-guarantees processing:
 ```scala
 import akka.actor.ActorSystem
-import akka.stream.ActorMaterializer
+import akka.stream.Materializer
 import akka.stream.scaladsl.Sink
 import com.amazonaws.auth.AWSCredentialsProviderChain
 import com.amazonaws.services.kinesis.clientlibrary.lib.worker._
@@ -107,7 +110,7 @@ object Main {
       }
 
     implicit val system = ActorSystem("Main")
-    implicit val materializer = ActorMaterializer()
+    implicit val materializer = Materializer(system)
     noGuaranteesSource.runWith(Sink.foreach(println))
 
     Thread.sleep(10.seconds.toMillis)

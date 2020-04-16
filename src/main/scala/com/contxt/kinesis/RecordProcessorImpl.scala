@@ -20,7 +20,7 @@ import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration._
 import scala.util.Try
 import scala.util.control.NonFatal
-import scala.collection.JavaConversions._
+import collection.JavaConverters._
 
 private[kinesis] class ShardCheckpointTracker(shardCheckpointConfig: ShardCheckpointConfig) {
   private val lock = new Object
@@ -113,7 +113,7 @@ private[kinesis] class RecordProcessorImpl(
 
   override def processRecords(processRecordsInput: ProcessRecordsInput): Unit = {
     try {
-      val records = processRecordsInput.getRecords.toIndexedSeq
+      val records = processRecordsInput.getRecords.asScala.toIndexedSeq
       val kinesisRecords = records.map(KinesisRecord.fromMutableRecord)
       shardCheckpointTracker.watchForCompletion(kinesisRecords)
       recordCheckpointerStats()

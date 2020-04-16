@@ -1,14 +1,18 @@
 package com.contxt.kinesis
 
-import akka.stream.{ Attributes, Inlet, SinkShape }
-import akka.stream.scaladsl.Sink
-import akka.stream.stage.{ GraphStageLogic, GraphStageWithMaterializedValue, InHandler }
-import com.amazonaws.services.kinesis.clientlibrary.exceptions.ThrottlingException
 import java.util.concurrent.ConcurrentLinkedQueue
+
+import akka.stream.scaladsl.Sink
+import akka.stream.stage.{GraphStageLogic, GraphStageWithMaterializedValue, InHandler}
+import akka.stream.{Attributes, Inlet, SinkShape}
+import com.amazonaws.services.kinesis.clientlibrary.exceptions.ThrottlingException
 import org.scalatest.concurrent.Eventually._
+
 import scala.collection.JavaConverters._
+import scala.collection.MapView
 
 object Inspectable {
+
   /** Returns a Sink that collects incoming elements into a list, and whose state can be inspected at any time
     * by using the function returned as the materialized value. */
   def sink[A]: Sink[A, () => IndexedSeq[A]] = {
@@ -17,7 +21,7 @@ object Inspectable {
       override val shape: SinkShape[A] = SinkShape(in)
 
       override def createLogicAndMaterializedValue(
-        inheritedAttributes: Attributes
+          inheritedAttributes: Attributes
       ): (GraphStageLogic, ConcurrentLinkedQueue[A]) = {
         val nonBlockingQueue = new ConcurrentLinkedQueue[A]
 
@@ -25,7 +29,8 @@ object Inspectable {
           override def preStart(): Unit = pull(in)
 
           setHandler(
-            in, new InHandler {
+            in,
+            new InHandler {
               override def onPush(): Unit = {
                 nonBlockingQueue.add(grab(in))
                 pull(in)
@@ -40,8 +45,8 @@ object Inspectable {
 
     Sink
       .fromGraph(stage)
-      .mapMaterializedValue { nonBlockingQueue =>
-        () => nonBlockingQueue.asScala.toIndexedSeq
+      .mapMaterializedValue { nonBlockingQueue => () =>
+        nonBlockingQueue.asScala.toIndexedSeq
       }
   }
 }
@@ -65,7 +70,8 @@ private[kinesis] class InspectableConsumerStats extends NoopConsumerStats {
   }
 
   def waitForNrOfCheckpointsPerShard(
-    minNumberOfShards: Int, checkpointCount: Int
+      minNumberOfShards: Int,
+      checkpointCount: Int
   )(implicit patienceConfig: PatienceConfig): Unit = {
     checkpointEventsByShardConsumer.clear()
     eventually {
@@ -85,7 +91,7 @@ private[kinesis] class InspectableConsumerStats extends NoopConsumerStats {
     }
   }
 
-  private def checkpointCountByShardConsumer(): Map[ShardConsumerId, Int] = {
+  private def checkpointCountByShardConsumer(): MapView[ShardConsumerId, Int] = {
     checkpointEventsByShardConsumer.asScala.toIndexedSeq
       .filter { case (_, event) => event == CheckpointAcked }
       .groupBy { case (key, _) => key }

@@ -15,6 +15,7 @@ object MessageUtil {
       .mapValues { keysWithMessages =>
         keysWithMessages.map { case (_, message) => message }
       }
+      .toMap
   }
 
   private[kinesis] def removeReprocessed(key: String, messages: IndexedSeq[String]): IndexedSeq[String] = {
@@ -48,8 +49,7 @@ object MessageUtil {
           throw new UnexpectedMessageSequence(key, lastMessage, messages)
         }
         j = lastIndexOfRetrySequence + 1
-      }
-      else {
+      } else {
         i += 1
         j += 1
       }
@@ -58,7 +58,7 @@ object MessageUtil {
   }
 
   private class UnexpectedMessageSequence(key: String, lastMessage: String, messages: IndexedSeq[String])
-    extends Exception(
-      s"Messages for key `$key` starting from `$lastMessage` were processed out of order: ${messages.mkString(",")}"
-    )
+      extends Exception(
+        s"Messages for key `$key` starting from `$lastMessage` were processed out of order: ${messages.mkString(",")}"
+      )
 }
