@@ -9,6 +9,7 @@ import org.scalatest.concurrent.Eventually._
 import software.amazon.kinesis.exceptions.ThrottlingException
 
 import scala.collection.JavaConverters._
+import scala.collection.MapView
 
 object Inspectable {
 
@@ -86,12 +87,12 @@ private[kinesis] class InspectableConsumerStats extends NoopConsumerStats {
     }
   }
 
-  private def checkpointCountByShardConsumer(): Map[ShardConsumerId, Int] = {
+  private def checkpointCountByShardConsumer(): MapView[ShardConsumerId, Int] = {
     checkpointEventsByShardConsumer.asScala.toIndexedSeq
       .filter { case (_, event) => event == CheckpointAcked }
       .groupBy { case (key, _) => key }
       .mapValues(_.size)
-  }.toMap
+  }
 
   private def throttledCheckpointsCount(): Int = {
     checkpointEventsByShardConsumer.asScala
