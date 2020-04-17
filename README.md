@@ -1,4 +1,7 @@
 # kcl-akka-stream
+[![CircleCI](https://circleci.com/gh/StreetContxt/kcl-akka-stream/tree/master.svg?style=shield)](https://circleci.com/gh/StreetContxt/kcl-akka-stream/tree/master)
+[![Bintray](https://img.shields.io/bintray/v/streetcontxt/maven/kcl-akka-stream)](https://bintray.com/streetcontxt/maven/kcl-akka-stream/_latestVersion)
+
 Akka Streaming Source backed by Kinesis Client Library (KCL 2.x).
 
 This library combines the convenience of Akka Streams with KCL 2.x checkpoint management, failover, load-balancing,

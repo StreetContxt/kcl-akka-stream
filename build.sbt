@@ -3,8 +3,8 @@ Defaults.itSettings
 val TestAndIntegrationTest = "test,it"
 
 organization in ThisBuild := "com.streetcontxt"
-scalaVersion in ThisBuild := "2.12.10"
-crossScalaVersions in ThisBuild := Seq("2.11.8", "2.12.10")
+scalaVersion in ThisBuild := "2.13.1"
+crossScalaVersions in ThisBuild := Seq("2.12.11", "2.13.1")
 licenses in ThisBuild += ("Apache-2.0", url("https://www.apache.org/licenses/LICENSE-2.0.html"))
 bintrayOrganization in ThisBuild := Some("streetcontxt")
 
@@ -22,14 +22,16 @@ version := sys.props
   }
   .getOrElse("LOCAL-SNAPSHOT")
 
+val AkkaVersion = "2.6.4"
+
 val slf4j = "org.slf4j" % "slf4j-api" % "1.7.30"
 val logback = "ch.qos.logback" % "logback-classic" % "1.2.3"
 val amazonKinesisClient = "software.amazon.kinesis" % "amazon-kinesis-client" % "2.2.7"
-val scalaKinesisProducer = "com.streetcontxt" %% "kpl-scala" % "1.0.5"
-val scalaTest = "org.scalatest" %% "scalatest" % "3.1.0"
+val scalaKinesisProducer = "com.streetcontxt" %% "kpl-scala" % "1.1.0"
+val scalaTest = "org.scalatest" %% "scalatest" % "3.1.1"
 val scalaMock = "org.scalamock" %% "scalamock" % "4.4.0"
-val akkaStream = "com.typesafe.akka" %% "akka-stream" % "2.5.28"
-val akkaStreamTestkit = "com.typesafe.akka" %% "akka-stream-testkit" % "2.5.28"
+val akkaStream = "com.typesafe.akka" %% "akka-stream" % AkkaVersion
+val akkaStreamTestkit = "com.typesafe.akka" %% "akka-stream-testkit" % AkkaVersion
 
 libraryDependencies ++= Seq(
   akkaStream,

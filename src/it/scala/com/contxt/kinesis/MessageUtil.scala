@@ -17,7 +17,7 @@ object MessageUtil {
       .mapValues { keysWithMessages =>
         keysWithMessages.map { case (_, message) => message }
       }
-  }
+  }.toMap
 
   private[kinesis] def removeReprocessed(key: String, messages: IndexedSeq[String]): IndexedSeq[String] = {
     def unwindRetry(sliceCandidate: IndexedSeq[String], from: Int): Int = {

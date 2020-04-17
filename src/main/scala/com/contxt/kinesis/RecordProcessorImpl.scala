@@ -7,18 +7,12 @@ import akka.stream.scaladsl.SourceQueueWithComplete
 import akka.stream.{KillSwitch, QueueOfferResult}
 import org.slf4j.LoggerFactory
 import software.amazon.kinesis.exceptions.{KinesisClientLibDependencyException, ShutdownException, ThrottlingException}
-import software.amazon.kinesis.lifecycle.events.{
-  InitializationInput,
-  LeaseLostInput,
-  ProcessRecordsInput,
-  ShardEndedInput,
-  ShutdownRequestedInput
-}
+import software.amazon.kinesis.lifecycle.events._
 import software.amazon.kinesis.lifecycle.{ShutdownInput, ShutdownReason}
 import software.amazon.kinesis.processor.{RecordProcessorCheckpointer, ShardRecordProcessor}
 import software.amazon.kinesis.retrieval.kpl.ExtendedSequenceNumber
 
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 import scala.collection.immutable.Queue
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -119,7 +113,7 @@ private[kinesis] class RecordProcessorImpl(
 
   override def processRecords(processRecordsInput: ProcessRecordsInput): Unit = {
     try {
-      val records = processRecordsInput.records().toIndexedSeq
+      val records = processRecordsInput.records().asScala.toIndexedSeq
       val kinesisRecords = records.map(KinesisRecord.fromMutableRecord)
       shardCheckpointTracker.watchForCompletion(kinesisRecords)
       recordCheckpointerStats()

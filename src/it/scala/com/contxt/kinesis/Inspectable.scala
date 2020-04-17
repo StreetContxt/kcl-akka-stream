@@ -91,7 +91,7 @@ private[kinesis] class InspectableConsumerStats extends NoopConsumerStats {
       .filter { case (_, event) => event == CheckpointAcked }
       .groupBy { case (key, _) => key }
       .mapValues(_.size)
-  }
+  }.toMap
 
   private def throttledCheckpointsCount(): Int = {
     checkpointEventsByShardConsumer.asScala
