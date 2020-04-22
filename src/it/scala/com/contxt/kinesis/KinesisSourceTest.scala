@@ -4,22 +4,25 @@ import akka.actor.ActorSystem
 import akka.stream._
 import akka.stream.scaladsl._
 import akka.testkit.TestKit
+import com.contxt.kinesis.MessageUtil._
 import org.scalatest._
-import scala.concurrent.duration._
 import org.scalatest.concurrent.Eventually._
 import org.scalatest.time._
-import com.contxt.kinesis.MessageUtil._
 import org.slf4j.LoggerFactory
+
 import scala.concurrent.Await
-import scala.util.{ Failure, Success, Try }
-import scala.util.control.NonFatal
+import scala.concurrent.duration._
+import scala.util.{Failure, Success, Try}
 
 class KinesisSourceTest
-  extends TestKit(ActorSystem("TestSystem"))
-    with fixture.WordSpecLike with BeforeAndAfterAll with Matchers with KinesisTestComponents
-{
+    extends TestKit(ActorSystem("TestSystem"))
+    with fixture.WordSpecLike
+    with BeforeAndAfterAll
+    with Matchers
+    with KinesisTestComponents {
   private val log = LoggerFactory.getLogger(getClass)
-  implicit val patienceConfig: PatienceConfig = PatienceConfig(scaled(Span(120, Seconds)), scaled(Span(4, Seconds)))
+  implicit val patienceConfig: PatienceConfig =
+    PatienceConfig(scaled(Span(120, Seconds)), scaled(Span(4, Seconds)))
   override protected def afterAll: Unit = TestKit.shutdownActorSystem(system)
   protected implicit val materializer: Materializer = ActorMaterializer()
 
@@ -37,8 +40,7 @@ class KinesisSourceTest
       val result = test(config)
       if (result.isFailed) Try(dumpStream(config))
       result
-    }
-    finally {
+    } finally {
       KinesisResourceManager.deleteStream(config.regionName, config.streamName, config.applicationName)
     }
   }
@@ -46,7 +48,8 @@ class KinesisSourceTest
   "KinesisSource" when {
     "running a single consumer" should {
       "process all the sent messages" in { implicit config =>
-        val sentFuture = messageSource(keyCount = 100, messageIntervalPerKey = 50.millis).take(1000)
+        val sentFuture = messageSource(keyCount = 100, messageIntervalPerKey = 50.millis)
+          .take(1000)
           .runWith(producerSink)
 
         withConsumerSource("singleConsumer") { (consumerSource, _) =>
@@ -63,7 +66,7 @@ class KinesisSourceTest
 
     "a consumer is not checkpointing" should {
       "reprocess messages after the bad consumer shuts down" in { implicit config =>
-        val minUncommitedRecordsBeforeBadConsumerShutdown = 500
+        val minUncommittedRecordsBeforeBadConsumerShutdown = 500
         val (producerKillSwitch, sentFuture) = messageSource(keyCount = 100, messageIntervalPerKey = 200.millis)
           .viaMat(KillSwitches.single)(Keep.right)
           .toMat(producerSink)(Keep.both)
@@ -77,7 +80,7 @@ class KinesisSourceTest
               .via(extractKeyAndMessage)
               .runWith(Inspectable.sink)
 
-            eventually(require(inspectReceived2().size > minUncommitedRecordsBeforeBadConsumerShutdown))
+            eventually(require(inspectReceived2().size > minUncommittedRecordsBeforeBadConsumerShutdown))
             consumerStats1.waitForAtLeastOneCheckpointPerShard(halfShardCount)
           }
 
@@ -138,17 +141,18 @@ class KinesisSourceTest
             consumerStats2.waitForAtLeastOneCheckpointPerShard(halfShardCount)
             bootstrapProducerKillSwitch.shutdown()
 
-            val (producerKillSwitch, sentFuture) =
-              messageSource(keyCount, messageIntervalPerKey = 200.millis)
-                .viaMat(KillSwitches.single)(Keep.right)
-                .toMat(producerSink)(Keep.both)
-                .run()
+            val (producerKillSwitch, sentFuture) = messageSource(keyCount, messageIntervalPerKey = 200.millis)
+              .viaMat(KillSwitches.single)(Keep.right)
+              .toMat(producerSink)(Keep.both)
+              .run()
 
             // Wait for data from producer2 to show up in both consumers.
             eventually {
-              val keysFromConsumer1 = groupByKey(inspectReceived1()).keySet.size
+              val keysFromConsumer1 =
+                groupByKey(inspectReceived1()).keySet.size
               require(keysFromConsumer1 >= keysPerConsumerForSuccessfulWarmup)
-              val keysFromConsumer2 = groupByKey(inspectReceived2()).keySet.size
+              val keysFromConsumer2 =
+                groupByKey(inspectReceived2()).keySet.size
               require(keysFromConsumer2 >= keysPerConsumerForSuccessfulWarmup)
             }
             consumerStats1.waitForAtLeastOneCheckpointPerShard(halfShardCount)
@@ -156,7 +160,8 @@ class KinesisSourceTest
 
             (inspectReceived2, producerKillSwitch, sentFuture)
           }
-          val (inspectReceived2, producerKillSwitch, sentFuture) = consumer2ClosureResult
+          val (inspectReceived2, producerKillSwitch, sentFuture) =
+            consumer2ClosureResult
 
           consumerStats1.waitForAtLeastOneCheckpointPerShard(initialShardCount)
           producerKillSwitch.shutdown()
@@ -234,7 +239,7 @@ class KinesisSourceTest
           val inspectReceived = runKinesisSourceWithInspection(consumerSource)
 
           eventually(require(inspectReceived().nonEmpty))
-          KinesisResourceManager.updateDynamoDbTableWithRate(config.applicationName, requetsPerSecond = 1)
+          KinesisResourceManager.updateDynamoDbTableWithRate(config.applicationName, requestPerSecond = 1)
 
           consumerStats.waitForAtLeastOneCheckpointPerShard(targetShardCount)
           consumerStats.waitForNrOfThrottledCheckpoints(5)
@@ -250,8 +255,8 @@ class KinesisSourceTest
   }
 
   private def assertRebalancingTestConditions(
-    receivedByConsumer1: IndexedSeq[KeyAndMessage],
-    receivedByConsumer2: IndexedSeq[KeyAndMessage]
+      receivedByConsumer1: IndexedSeq[KeyAndMessage],
+      receivedByConsumer2: IndexedSeq[KeyAndMessage]
   ): Unit = {
     val receivedByConsumer1Only = receivedByConsumer1.toSet -- receivedByConsumer2.toSet
     val receivedByConsumer2Only = receivedByConsumer2.toSet -- receivedByConsumer1.toSet
@@ -264,9 +269,7 @@ class KinesisSourceTest
   private def dumpStream(config: TestStreamConfig): Unit = {
     implicit val dumpConfig = config.copy(applicationName = s"${config.applicationName}_streamDump")
     withConsumerSource("dumpConsumer") { (kinesisSource, _) =>
-      val inspectReceived = kinesisSource
-        .via(extractKeyAndMessage)
-        .runWith(Inspectable.sink)
+      val inspectReceived = kinesisSource.via(extractKeyAndMessage).runWith(Inspectable.sink)
 
       val result = Try {
         var received = IndexedSeq.empty[KeyAndMessage]

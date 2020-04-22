@@ -5,6 +5,7 @@ import akka.stream.scaladsl.Sink
 import akka.stream.{ActorMaterializer, Materializer}
 import akka.testkit.TestKit
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
+
 import scala.concurrent.Await
 import scala.concurrent.duration._
 

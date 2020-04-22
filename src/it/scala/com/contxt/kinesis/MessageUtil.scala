@@ -6,7 +6,9 @@ object MessageUtil {
     * Sending a message batch can be retried, as long as the order of messages remains the same.
     * Processing of messages can restart at an earlier checkpoint, as long as the order of messages remains the same. */
   def dedupAndGroupByKey(keyMessagePairs: Seq[(String, String)]): Map[String, IndexedSeq[String]] = {
-    groupByKey(keyMessagePairs).map { case (key, value) => key -> removeReprocessed(key, value) }
+    groupByKey(keyMessagePairs).map {
+      case (key, value) => key -> removeReprocessed(key, value)
+    }
   }
 
   def groupByKey(keyMessagePairs: Seq[(String, String)]): Map[String, IndexedSeq[String]] = {
@@ -15,8 +17,7 @@ object MessageUtil {
       .mapValues { keysWithMessages =>
         keysWithMessages.map { case (_, message) => message }
       }
-      .toMap
-  }
+  }.toMap
 
   private[kinesis] def removeReprocessed(key: String, messages: IndexedSeq[String]): IndexedSeq[String] = {
     def unwindRetry(sliceCandidate: IndexedSeq[String], from: Int): Int = {
@@ -58,7 +59,6 @@ object MessageUtil {
   }
 
   private class UnexpectedMessageSequence(key: String, lastMessage: String, messages: IndexedSeq[String])
-      extends Exception(
-        s"Messages for key `$key` starting from `$lastMessage` were processed out of order: ${messages.mkString(",")}"
-      )
+      extends Exception(s"Messages for key `$key` starting from `$lastMessage` were processed out of order: ${messages
+        .mkString(",")}")
 }

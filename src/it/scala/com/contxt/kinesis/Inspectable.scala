@@ -5,8 +5,8 @@ import java.util.concurrent.ConcurrentLinkedQueue
 import akka.stream.scaladsl.Sink
 import akka.stream.stage.{GraphStageLogic, GraphStageWithMaterializedValue, InHandler}
 import akka.stream.{Attributes, Inlet, SinkShape}
-import com.amazonaws.services.kinesis.clientlibrary.exceptions.ThrottlingException
 import org.scalatest.concurrent.Eventually._
+import software.amazon.kinesis.exceptions.ThrottlingException
 
 import scala.collection.JavaConverters._
 import scala.collection.MapView
@@ -28,15 +28,12 @@ object Inspectable {
         val logic = new GraphStageLogic(shape) {
           override def preStart(): Unit = pull(in)
 
-          setHandler(
-            in,
-            new InHandler {
-              override def onPush(): Unit = {
-                nonBlockingQueue.add(grab(in))
-                pull(in)
-              }
+          setHandler(in, new InHandler {
+            override def onPush(): Unit = {
+              nonBlockingQueue.add(grab(in))
+              pull(in)
             }
-          )
+          })
         }
 
         (logic, nonBlockingQueue)
@@ -69,10 +66,9 @@ private[kinesis] class InspectableConsumerStats extends NoopConsumerStats {
     waitForNrOfCheckpointsPerShard(minNumberOfShards, 1)
   }
 
-  def waitForNrOfCheckpointsPerShard(
-      minNumberOfShards: Int,
-      checkpointCount: Int
-  )(implicit patienceConfig: PatienceConfig): Unit = {
+  def waitForNrOfCheckpointsPerShard(minNumberOfShards: Int, checkpointCount: Int)(
+      implicit patienceConfig: PatienceConfig
+  ): Unit = {
     checkpointEventsByShardConsumer.clear()
     eventually {
       val currentCheckpointCounts = checkpointCountByShardConsumer()

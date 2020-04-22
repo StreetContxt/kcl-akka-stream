@@ -2,16 +2,19 @@ package com.contxt.kinesis
 
 import akka.Done
 import akka.actor.ActorSystem
-import akka.stream.{ActorMaterializer, KillSwitches, Materializer, UniqueKillSwitch}
 import akka.stream.scaladsl.{Keep, Sink, Source}
+import akka.stream.{ActorMaterializer, KillSwitches, UniqueKillSwitch}
 import akka.testkit.TestKit
-import com.amazonaws.auth.DefaultAWSCredentialsProviderChain
-import com.amazonaws.services.kinesis.clientlibrary.interfaces.v2.IRecordProcessorFactory
-import com.amazonaws.services.kinesis.clientlibrary.lib.worker.KinesisClientLibConfiguration
+import org.scalamock.scalatest.MockFactory
 import org.scalatest.concurrent.Eventually
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
-import scala.concurrent.{Await, Future, Promise}
+import software.amazon.awssdk.services.cloudwatch.CloudWatchAsyncClient
+import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient
+import software.amazon.awssdk.services.kinesis.KinesisAsyncClient
+import software.amazon.kinesis.processor.ShardRecordProcessorFactory
+
 import scala.concurrent.duration._
+import scala.concurrent.{Await, Future, Promise}
 import scala.util.{Failure, Try}
 
 class KinesisSourceFactoryTest
@@ -19,26 +22,18 @@ class KinesisSourceFactoryTest
     with WordSpecLike
     with BeforeAndAfterAll
     with Matchers
-    with Eventually {
+    with Eventually
+    with MockFactory {
   override protected def afterAll: Unit = TestKit.shutdownActorSystem(system)
-  protected implicit val materializer: Materializer = ActorMaterializer()
+
+  protected implicit val actorMaterializer: ActorMaterializer = ActorMaterializer()
   private val awaitDuration = 5.seconds
 
   "KinesisSource" when {
-    "creating a stream" should {
-      "require `CallProcessRecordsEvenForEmptyRecordList` to be true" in {
-        an[IllegalArgumentException] shouldBe thrownBy {
-          val badConfig = clientConfig.withCallProcessRecordsEvenForEmptyRecordList(false)
-          KinesisSource(badConfig)
-        }
-        KinesisSource(clientConfig) // Check that config is good otherwise.
-      }
-    }
-
     "creating a worker" should {
       "fail stream if worker creation fails" in {
         val exception = new RuntimeException("TestException1")
-        val workerFactory: (IRecordProcessorFactory, KinesisClientLibConfiguration) => ManagedWorker = { (_, _) =>
+        val workerFactory: (ShardRecordProcessorFactory, ConsumerConfig) => ManagedWorker = { (_, _) =>
           throw exception
         }
         val source = KinesisSource(workerFactory, clientConfig, shardCheckpointConfig, new NoopConsumerStats)
@@ -111,7 +106,7 @@ class KinesisSourceFactoryTest
   }
 
   private def mkSource(mockWorker: MockWorker): Source[KinesisRecord, Future[Done]] = {
-    val workerFactory: (IRecordProcessorFactory, KinesisClientLibConfiguration) => ManagedWorker = { (_, _) =>
+    val workerFactory: (ShardRecordProcessorFactory, ConsumerConfig) => ManagedWorker = { (_, _) =>
       mockWorker
     }
     KinesisSource(workerFactory, clientConfig, shardCheckpointConfig, new NoopConsumerStats)
@@ -123,19 +118,23 @@ class KinesisSourceFactoryTest
     maxWaitForCompletionOnStreamShutdown = 4.seconds
   )
 
-  private def clientConfig = {
-    new KinesisClientLibConfiguration(
-      "applicationName1",
-      "streamName1",
-      new DefaultAWSCredentialsProviderChain(),
-      "workerId1"
-    ).withCallProcessRecordsEvenForEmptyRecordList(true)
-  }
+  private def clientConfig =
+    new ConsumerConfig(
+      streamName = "streamName1",
+      appName = "applicationName1",
+      workerId = "workerId",
+      kinesisClient = mock[KinesisAsyncClient],
+      dynamoClient = mock[DynamoDbAsyncClient],
+      cloudwatchClient = mock[CloudWatchAsyncClient]
+    )
 
   class MockWorker extends ManagedWorker {
     val runControl: Promise[Done] = Promise[Done]()
     val shutdownControl: Promise[Done] = Promise[Done]()
+
     override def run(): Unit = Await.result(runControl.future, Duration.Inf)
-    override def shutdownAndWait(): Unit = Await.result(shutdownControl.future, Duration.Inf)
+
+    override def shutdownAndWait(): Unit =
+      Await.result(shutdownControl.future, Duration.Inf)
   }
 }

@@ -1,9 +1,10 @@
 package com.contxt.kinesis
 
 import akka.stream.QueueOfferResult
-import com.amazonaws.services.kinesis.clientlibrary.lib.worker.ShutdownReason
 import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
+import software.amazon.kinesis.lifecycle.ShutdownReason
+
 import scala.concurrent.Future
 import scala.util.control.NonFatal
 
@@ -15,10 +16,9 @@ trait ConsumerStats {
 
   def trackRecord(shardConsumerId: ShardConsumerId, record: KinesisRecord): Unit
 
-  def trackBatchEnqueue(
-      shardConsumerId: ShardConsumerId,
-      batchSize: Int
-  )(closure: => Future[QueueOfferResult]): Future[QueueOfferResult]
+  def trackBatchEnqueue(shardConsumerId: ShardConsumerId, batchSize: Int)(
+      closure: => Future[QueueOfferResult]
+  ): Future[QueueOfferResult]
 
   def recordNrOfInFlightRecords(shardConsumerId: ShardConsumerId, totalCount: Int): Unit
   def recordNrOfProcessedUncheckpointedRecords(shardConsumerId: ShardConsumerId, totalCount: Int): Unit
@@ -49,10 +49,9 @@ class NoopConsumerStats extends ConsumerStats {
   def checkpointFailed(shardConsumerId: ShardConsumerId, e: Throwable): Unit = {}
 
   def trackRecord(shardConsumerId: ShardConsumerId, record: KinesisRecord): Unit = {}
-  def trackBatchEnqueue(
-      shardConsumerId: ShardConsumerId,
-      batchSize: Int
-  )(closure: => Future[QueueOfferResult]): Future[QueueOfferResult] = closure
+  def trackBatchEnqueue(shardConsumerId: ShardConsumerId, batchSize: Int)(
+      closure: => Future[QueueOfferResult]
+  ): Future[QueueOfferResult] = closure
 
   def recordNrOfInFlightRecords(shardConsumerId: ShardConsumerId, totalCount: Int): Unit = {}
   def recordNrOfProcessedUncheckpointedRecords(shardConsumerId: ShardConsumerId, totalCount: Int): Unit = {}

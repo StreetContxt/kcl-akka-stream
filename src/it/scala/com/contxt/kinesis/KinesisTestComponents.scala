@@ -2,11 +2,12 @@ package com.contxt.kinesis
 
 import akka.NotUsed
 import akka.stream._
-import akka.stream.scaladsl.{ Flow, Keep, Merge, RunnableGraph, Sink, Source }
+import akka.stream.scaladsl.{Flow, Keep, Merge, RunnableGraph, Sink, Source}
 import org.scalatest.Tag
 import org.scalatest.concurrent.Eventually._
-import scala.concurrent.{ Await, Future, Promise }
+
 import scala.concurrent.duration._
+import scala.concurrent.{Await, Future, Promise}
 import scala.util.Try
 
 trait KinesisTestComponents {
@@ -21,10 +22,7 @@ trait KinesisTestComponents {
   protected def buildConfig(tags: Set[String]): TestStreamConfig = {
     tags.foldLeft(TestStreamConfig.fromRandomUuid()) {
       case (currentConfig, ThrottledByCheckpoint.name) =>
-        currentConfig.copy(
-          checkpointAfterCompletingNrOfRecords = 1,
-          idleTimeBetweenGetRecords = 1.millis
-        )
+        currentConfig.copy(checkpointAfterCompletingNrOfRecords = 1, idleTimeBetweenGetRecords = 1.millis)
 
       case (currentConfig, _) =>
         currentConfig
@@ -32,7 +30,9 @@ trait KinesisTestComponents {
   }
 
   protected def messageSource(
-    keyCount: Int, messageIntervalPerKey: FiniteDuration, keyPrefix: String = "key"
+      keyCount: Int,
+      messageIntervalPerKey: FiniteDuration,
+      keyPrefix: String = "key"
   ): Source[KeyAndMessage, NotUsed] = {
     require(keyCount >= 2)
     def mkKey(i: Int) = f"${keyPrefix}_$i%03d"
@@ -50,9 +50,9 @@ trait KinesisTestComponents {
     KinesisTestProducer.sink(config.streamName, config.kplConfig)
   }
 
-  protected def withConsumerSource[A](workerId: String)(
-    closure: (Source[KinesisRecord, NotUsed], InspectableConsumerStats) => A
-  )(implicit config: TestStreamConfig): A = {
+  protected def withConsumerSource[A](
+      workerId: String
+  )(closure: (Source[KinesisRecord, NotUsed], InspectableConsumerStats) => A)(implicit config: TestStreamConfig): A = {
     val consumerStats = new InspectableConsumerStats
     val (consumerSource, materializationFuture) = liftMaterializedValue {
       KinesisSource(
@@ -60,12 +60,12 @@ trait KinesisTestComponents {
         config.kclConfig(workerId),
         config.shardCheckpointConfig,
         consumerStats
-      )
-        .viaMat(KillSwitches.single)(Keep.both)
+      ).viaMat(KillSwitches.single)(Keep.both)
     }
     val closureResult = Try(closure(consumerSource, consumerStats))
     Try { // Always keep the original test exception, and try to shutdown cleanly if possible.
-      val (workerTerminationFuture, killSwitch) = Await.result(materializationFuture, 0.second)
+      val (workerTerminationFuture, killSwitch) =
+        Await.result(materializationFuture, 0.second)
       killSwitch.shutdown()
       Await.ready(workerTerminationFuture, KinesisResourceManager.WorkerTerminationTimeout)
     }
@@ -73,7 +73,7 @@ trait KinesisTestComponents {
   }
 
   protected def runKinesisSourceWithInspection(
-    kinesisSource: Source[KinesisRecord, NotUsed]
+      kinesisSource: Source[KinesisRecord, NotUsed]
   ): () => IndexedSeq[KeyAndMessage] = {
     kinesisSource
       .via(markRecordsAsProcessed)
@@ -108,8 +108,7 @@ trait KinesisTestComponents {
         if (record.partitionKey.startsWith(bootstrapKeyPrefix)) {
           record.markProcessed()
           false
-        }
-        else true
+        } else true
       }
   }
 

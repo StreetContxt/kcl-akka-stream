@@ -3,6 +3,7 @@ package com.contxt.kinesis
 import akka.stream._
 import akka.stream.scaladsl._
 import akka.stream.stage._
+
 import scala.concurrent.{Future, Promise}
 
 private[kinesis] object MaterializerAsValue {

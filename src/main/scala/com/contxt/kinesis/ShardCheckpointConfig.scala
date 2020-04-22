@@ -1,6 +1,7 @@
 package com.contxt.kinesis
 
 import com.typesafe.config.Config
+
 import scala.concurrent.duration._
 
 case class ShardCheckpointConfig(
