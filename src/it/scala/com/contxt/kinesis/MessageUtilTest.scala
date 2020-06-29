@@ -1,8 +1,9 @@
 package com.contxt.kinesis
 
-import org.scalatest.{Matchers, WordSpec}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
-class MessageUtilTest extends WordSpec with Matchers {
+class MessageUtilTest extends AnyWordSpec with Matchers {
   "MessageUtil" when {
     "grouping by key" should {
       "keep duplicates" in {

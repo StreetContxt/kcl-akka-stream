@@ -4,11 +4,12 @@ import java.nio.ByteBuffer
 import java.time.Instant
 
 import akka.util.ByteString
-import org.scalatest.{Matchers, WordSpec}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 import software.amazon.awssdk.services.kinesis.model.EncryptionType
 import software.amazon.kinesis.retrieval.KinesisClientRecord
 
-class KinesisRecordTest extends WordSpec with Matchers {
+class KinesisRecordTest extends AnyWordSpec with Matchers {
   "KinesisRecord" when {
     "created from kinesis.model.Record" should {
       "have all the fields" in {
