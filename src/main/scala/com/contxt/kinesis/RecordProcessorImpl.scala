@@ -12,10 +12,10 @@ import software.amazon.kinesis.lifecycle.{ShutdownInput, ShutdownReason}
 import software.amazon.kinesis.processor.{RecordProcessorCheckpointer, ShardRecordProcessor}
 import software.amazon.kinesis.retrieval.kpl.ExtendedSequenceNumber
 
-import scala.collection.JavaConverters._
 import scala.collection.immutable.Queue
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.jdk.CollectionConverters._
 import scala.util.Try
 import scala.util.control.NonFatal
 

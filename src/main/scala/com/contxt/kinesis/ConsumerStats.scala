@@ -33,7 +33,7 @@ object ConsumerStats {
   def getInstance(config: Config): ConsumerStats = {
     try {
       val className = config.getString("com.contxt.kinesis.consumer.stats-class-name")
-      Class.forName(className).newInstance().asInstanceOf[ConsumerStats]
+      Class.forName(className).getDeclaredConstructor().newInstance().asInstanceOf[ConsumerStats]
     } catch {
       case NonFatal(e) =>
         log.error("Could not load a `ConsumerStats` instance, falling back to `NoopConsumerStats`.", e)

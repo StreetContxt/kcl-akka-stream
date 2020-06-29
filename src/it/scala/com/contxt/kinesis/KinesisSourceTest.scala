@@ -6,6 +6,7 @@ import akka.stream.scaladsl._
 import akka.testkit.TestKit
 import com.contxt.kinesis.MessageUtil._
 import org.scalatest._
+import org.scalatest.concurrent.Eventually
 import org.scalatest.concurrent.Eventually._
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.time._
@@ -26,7 +27,7 @@ class KinesisSourceTest
   implicit val patienceConfig: PatienceConfig =
     PatienceConfig(scaled(Span(120, Seconds)), scaled(Span(4, Seconds)))
   override protected def afterAll: Unit = TestKit.shutdownActorSystem(system)
-  protected implicit val materializer: Materializer = ActorMaterializer()
+  protected implicit val materializer: Materializer = Materializer(system)
 
   private val initialShardCount = 4
   private val halfShardCount = initialShardCount / 2
@@ -228,7 +229,8 @@ class KinesisSourceTest
 
     "getting throttled during checkpoint requests" should {
       "survive and process all the sent messages" taggedAs ThrottledByCheckpoint in { implicit config =>
-        implicit val patienceConfig = PatienceConfig(scaled(Span(480, Seconds)), scaled(Span(2, Seconds)))
+        implicit val patienceConfig: Eventually.PatienceConfig =
+          PatienceConfig(scaled(Span(480, Seconds)), scaled(Span(2, Seconds)))
         val targetShardCount = 8
         KinesisResourceManager.reshardStream(config.regionName, config.streamName, targetShardCount)
 
@@ -269,7 +271,7 @@ class KinesisSourceTest
   }
 
   private def dumpStream(config: TestStreamConfig): Unit = {
-    implicit val dumpConfig = config.copy(applicationName = s"${config.applicationName}_streamDump")
+    implicit val dumpConfig: TestStreamConfig = config.copy(applicationName = s"${config.applicationName}_streamDump")
     withConsumerSource("dumpConsumer") { (kinesisSource, _) =>
       val inspectReceived = kinesisSource.via(extractKeyAndMessage).runWith(Inspectable.sink)
 

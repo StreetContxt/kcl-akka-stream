@@ -3,7 +3,7 @@ package com.contxt.kinesis
 import akka.Done
 import akka.actor.ActorSystem
 import akka.stream.scaladsl.{Keep, Sink, Source}
-import akka.stream.{ActorMaterializer, KillSwitches, UniqueKillSwitch}
+import akka.stream.{KillSwitches, Materializer, UniqueKillSwitch}
 import akka.testkit.TestKit
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.BeforeAndAfterAll
@@ -26,9 +26,9 @@ class KinesisSourceFactoryTest
     with Matchers
     with Eventually
     with MockFactory {
-  override protected def afterAll: Unit = TestKit.shutdownActorSystem(system)
+  override protected def afterAll(): Unit = TestKit.shutdownActorSystem(system)
 
-  protected implicit val actorMaterializer: ActorMaterializer = ActorMaterializer()
+  protected implicit val materializer: Materializer = Materializer(system)
   private val awaitDuration = 5.seconds
 
   "KinesisSource" when {
@@ -114,7 +114,7 @@ class KinesisSourceFactoryTest
     KinesisSource(workerFactory, clientConfig, shardCheckpointConfig, new NoopConsumerStats)
   }
 
-  private val shardCheckpointConfig = ShardCheckpointConfig(
+  private def shardCheckpointConfig = ShardCheckpointConfig(
     checkpointPeriod = 1.minutes,
     checkpointAfterProcessingNrOfRecords = 10000,
     maxWaitForCompletionOnStreamShutdown = 4.seconds

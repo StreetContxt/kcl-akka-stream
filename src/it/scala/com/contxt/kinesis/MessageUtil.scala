@@ -14,6 +14,7 @@ object MessageUtil {
   def groupByKey(keyMessagePairs: Seq[(String, String)]): Map[String, IndexedSeq[String]] = {
     keyMessagePairs.toIndexedSeq
       .groupBy { case (key, _) => key }
+      .view
       .mapValues { keysWithMessages =>
         keysWithMessages.map { case (_, message) => message }
       }
@@ -38,7 +39,7 @@ object MessageUtil {
     var (i, j) = (0, 0)
     var lastRestartedAt = 0
     while (j < messages.size) {
-      val lastDistinct = if (i < distinct.size) Some(distinct(i)) else None
+      val lastDistinct = distinct.lift(i)
       val lastMessage = messages(j)
       if (lastDistinct.isEmpty || lastDistinct.get != lastMessage) {
         val restartedAt = distinct.lastIndexOf(lastMessage)

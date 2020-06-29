@@ -18,7 +18,7 @@ case class KinesisRecord(
     approximateArrivalTimestamp: Instant,
     encryptionType: Option[EncryptionType]
 ) {
-  private val completionPromise = Promise[Done]
+  private val completionPromise = Promise[Done]()
 
   private[kinesis] def completionFuture: Future[Done] = completionPromise.future
 
@@ -38,7 +38,7 @@ case class KinesisRecord(
   private[kinesis] def offsetString: String = {
     subSequenceNumber match {
       case Some(definedSubSequence) => s"Offset(sequenceNumber=$sequenceNumber, subSequenceNumber=$definedSubSequence)"
-      case None                     => s"Offset(sequenceNumber=$sequenceNumber)"
+      case None => s"Offset(sequenceNumber=$sequenceNumber)"
     }
   }
 }
