@@ -6,8 +6,10 @@ import akka.stream.scaladsl.{Keep, Sink, Source}
 import akka.stream.{ActorMaterializer, KillSwitches, UniqueKillSwitch}
 import akka.testkit.TestKit
 import org.scalamock.scalatest.MockFactory
+import org.scalatest.BeforeAndAfterAll
 import org.scalatest.concurrent.Eventually
-import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 import software.amazon.awssdk.services.cloudwatch.CloudWatchAsyncClient
 import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient
 import software.amazon.awssdk.services.kinesis.KinesisAsyncClient
@@ -19,7 +21,7 @@ import scala.util.{Failure, Try}
 
 class KinesisSourceFactoryTest
     extends TestKit(ActorSystem("TestSystem"))
-    with WordSpecLike
+    with AnyWordSpecLike
     with BeforeAndAfterAll
     with Matchers
     with Eventually

@@ -4,14 +4,16 @@ import akka.actor.ActorSystem
 import akka.stream.scaladsl.Sink
 import akka.stream.{ActorMaterializer, Materializer}
 import akka.testkit.TestKit
-import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
+import org.scalatest.BeforeAndAfterAll
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
 class MaterializerAsValueTest
     extends TestKit(ActorSystem("TestSystem"))
-    with WordSpecLike
+    with AnyWordSpecLike
     with BeforeAndAfterAll
     with Matchers {
   override protected def afterAll: Unit = TestKit.shutdownActorSystem(system)

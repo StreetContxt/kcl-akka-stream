@@ -4,13 +4,14 @@ import java.time.Instant
 
 import akka.Done
 import akka.util.ByteString
-import org.scalatest.{Matchers, WordSpec}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 import software.amazon.awssdk.services.kinesis.model.EncryptionType
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, TimeoutException}
 
-class ShardCheckpointTrackerTest extends WordSpec with Matchers {
+class ShardCheckpointTrackerTest extends AnyWordSpec with Matchers {
   private val completionFutureAwaitDuration = 1.second
 
   "ShardCheckpointTracker" when {

@@ -7,7 +7,9 @@ import akka.testkit.TestKit
 import com.contxt.kinesis.MessageUtil._
 import org.scalatest._
 import org.scalatest.concurrent.Eventually._
+import org.scalatest.matchers.should.Matchers
 import org.scalatest.time._
+import org.scalatest.wordspec.FixtureAnyWordSpecLike
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.Await
@@ -16,7 +18,7 @@ import scala.util.{Failure, Success, Try}
 
 class KinesisSourceTest
     extends TestKit(ActorSystem("TestSystem"))
-    with fixture.WordSpecLike
+    with FixtureAnyWordSpecLike
     with BeforeAndAfterAll
     with Matchers
     with KinesisTestComponents {
