@@ -143,7 +143,7 @@ object KinesisSource {
       streamTerminationFuture: Future[Done]
   ): Future[Done] = {
     implicit val blockingContext: ExecutionContext = BlockingContext.KinesisWorkersSharedContext
-    val workerShutdownPromise = Promise[Done]
+    val workerShutdownPromise = Promise[Done]()
     Future {
       try {
         val worker = Try(workerFactory(recordProcessorFactory, kclConfig))

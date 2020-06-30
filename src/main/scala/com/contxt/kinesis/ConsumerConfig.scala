@@ -65,8 +65,7 @@ object ConsumerConfig {
   )(implicit kac: KinesisAsyncClient, dac: DynamoDbAsyncClient, cwac: CloudWatchAsyncClient): ConsumerConfig =
     ConsumerConfig(streamName, appName, generateWorkerId(), kac, dac, cwac)
 
-  def fromConfig(config: Config)(
-      implicit
+  def fromConfig(config: Config)(implicit
       kac: KinesisAsyncClient = null,
       dac: DynamoDbAsyncClient = null,
       cwac: CloudWatchAsyncClient = null
