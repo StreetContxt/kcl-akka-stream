@@ -121,10 +121,11 @@ class KinesisSourceFactoryTest
   )
 
   private def clientConfig =
-    new ConsumerConfig(
+    ConsumerConfig(
       streamName = "streamName1",
       appName = "applicationName1",
-      workerId = "workerId",
+      workerId = "workerId"
+    )(
       kinesisClient = mock[KinesisAsyncClient],
       dynamoClient = mock[DynamoDbAsyncClient],
       cloudwatchClient = mock[CloudWatchAsyncClient]

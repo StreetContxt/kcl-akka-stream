@@ -32,7 +32,8 @@ case class KinesisRecord(
     * records out of order in an asynchronous fashion. Each record must be eventually marked as processed by
     * calling `markProcessed()`, or the steam must be terminated with an exception. If the stream continues
     * after failing to process a record, and not marking it as processed, then no further records can be checkpointed,
-    * eventually causing the system to run out of memory. */
+    * eventually causing the system to run out of memory.
+    */
   def markProcessed(): Unit = completionPromise.trySuccess(Done)
 
   private[kinesis] def offsetString: String = {

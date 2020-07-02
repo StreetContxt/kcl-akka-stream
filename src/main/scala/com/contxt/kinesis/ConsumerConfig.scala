@@ -1,6 +1,5 @@
 package com.contxt.kinesis
 
-import java.sql.Date
 import java.text.DateFormat
 import java.util.UUID
 
@@ -21,87 +20,125 @@ case class ConsumerConfig(
     kinesisClient: KinesisAsyncClient,
     dynamoClient: DynamoDbAsyncClient,
     cloudwatchClient: CloudWatchAsyncClient,
-    initialPositionInStreamExtended: InitialPositionInStreamExtended =
-      InitialPositionInStreamExtended.newInitialPosition(InitialPositionInStream.LATEST),
-    coordinatorConfig: Option[CoordinatorConfig] = None,
-    leaseManagementConfig: Option[LeaseManagementConfig] = None,
-    metricsConfig: Option[MetricsConfig] = None,
-    retrievalConfig: Option[RetrievalConfig] = None
-) {
-  def withInitialStreamPosition(position: InitialPositionInStream): ConsumerConfig =
-    this.copy(initialPositionInStreamExtended = InitialPositionInStreamExtended.newInitialPosition(position))
-
-  def withInitialStreamPositionAtTimestamp(time: Date): ConsumerConfig =
-    this.copy(initialPositionInStreamExtended = InitialPositionInStreamExtended.newInitialPositionAtTimestamp(time))
-
-  def withCoordinatorConfig(config: CoordinatorConfig): ConsumerConfig =
-    this.copy(coordinatorConfig = Some(config))
-
-  def withLeaseManagementConfig(config: LeaseManagementConfig): ConsumerConfig =
-    this.copy(leaseManagementConfig = Some(config))
-
-  def withMetricsConfig(config: MetricsConfig): ConsumerConfig =
-    this.copy(metricsConfig = Some(config))
-
-  def withRetrievalConfig(config: RetrievalConfig): ConsumerConfig =
-    this.copy(retrievalConfig = Some(config))
-
-  def withWorkerId(workerId: String): ConsumerConfig =
-    this.copy(workerId = workerId)
-}
+    initialPositionInStreamExtended: InitialPositionInStreamExtended,
+    coordinatorConfig: Option[CoordinatorConfig],
+    leaseManagementConfig: Option[LeaseManagementConfig],
+    metricsConfig: Option[MetricsConfig],
+    retrievalConfig: Option[RetrievalConfig]
+)
 
 object ConsumerConfig {
-  def apply(streamName: String, appName: String): ConsumerConfig = {
-    val kinesisClient = KinesisAsyncClient.builder.build()
-    val dynamoClient = DynamoDbAsyncClient.builder.build()
-    val cloudWatchClient = CloudWatchAsyncClient.builder.build()
 
-    withNames(streamName, appName)(kinesisClient, dynamoClient, cloudWatchClient)
+  def apply(
+      streamName: String,
+      appName: String,
+      workerId: String = ConsumerConfig.generateWorkerId,
+      initialPositionInStreamExtended: InitialPositionInStreamExtended = defaultInitialPosition,
+      coordinatorConfig: Option[CoordinatorConfig] = None,
+      leaseManagementConfig: Option[LeaseManagementConfig] = None,
+      metricsConfig: Option[MetricsConfig] = None,
+      retrievalConfig: Option[RetrievalConfig] = None
+  )(implicit
+      kinesisClient: KinesisAsyncClient = defaultKinesisClient,
+      dynamoClient: DynamoDbAsyncClient = defaultDynamoClient,
+      cloudwatchClient: CloudWatchAsyncClient = defaultCloudwatchClient
+  ): ConsumerConfig = {
+    ConsumerConfig(
+      streamName,
+      appName,
+      workerId,
+      kinesisClient,
+      dynamoClient,
+      cloudwatchClient,
+      initialPositionInStreamExtended,
+      coordinatorConfig,
+      leaseManagementConfig,
+      metricsConfig,
+      retrievalConfig
+    )
   }
 
-  def withNames(
-      streamName: String,
-      appName: String
-  )(implicit kac: KinesisAsyncClient, dac: DynamoDbAsyncClient, cwac: CloudWatchAsyncClient): ConsumerConfig =
-    ConsumerConfig(streamName, appName, generateWorkerId(), kac, dac, cwac)
-
-  def fromConfig(config: Config)(implicit
-      kac: KinesisAsyncClient = null,
-      dac: DynamoDbAsyncClient = null,
-      cwac: CloudWatchAsyncClient = null
+  def fromConfig(
+      config: Config,
+      workerId: String = ConsumerConfig.generateWorkerId,
+      coordinatorConfig: Option[CoordinatorConfig] = None,
+      leaseManagementConfig: Option[LeaseManagementConfig] = None,
+      metricsConfig: Option[MetricsConfig] = None,
+      retrievalConfig: Option[RetrievalConfig] = None
+  )(implicit
+      kac: KinesisAsyncClient = defaultKinesisClient,
+      dac: DynamoDbAsyncClient = defaultDynamoClient,
+      cwac: CloudWatchAsyncClient = defaultCloudwatchClient
   ): ConsumerConfig = {
-    def getOpt[A](key: String, lookup: String => A): Option[A] =
-      if (config.hasPath(key)) Some(lookup(key)) else None
+    val parsedConfig = ParsedConsumerConfig(config)
 
-    def getStringOpt(key: String): Option[String] =
-      getOpt(key, config.getString)
+    ConsumerConfig(
+      parsedConfig.streamName,
+      parsedConfig.appName,
+      workerId,
+      kac,
+      dac,
+      cwac,
+      parsedConfig.initialPositionInStreamExtended.getOrElse(defaultInitialPosition),
+      coordinatorConfig,
+      leaseManagementConfig,
+      metricsConfig,
+      retrievalConfig
+    )
+  }
 
-    val StreamPositionLatest = "latest"
-    val StreamPositionHorizon = "trim-horizon"
-    val StreamPositionTimestamp = "at-timestamp"
+  private def defaultInitialPosition: InitialPositionInStreamExtended =
+    InitialPositionInStreamExtended.newInitialPosition(InitialPositionInStream.LATEST)
 
-    val streamName = config.getString("stream-name")
-    val name = config.getString("application-name")
-    val latestPos = InitialPositionInStreamExtended.newInitialPosition(InitialPositionInStream.LATEST)
+  private def defaultKinesisClient: KinesisAsyncClient =
+    KinesisClientUtil.createKinesisAsyncClient(KinesisAsyncClient.builder())
 
-    val streamPosition = getStringOpt("position.initial")
+  private def defaultDynamoClient: DynamoDbAsyncClient = DynamoDbAsyncClient.builder.build()
+
+  private def defaultCloudwatchClient: CloudWatchAsyncClient = CloudWatchAsyncClient.builder.build()
+
+  private def generateWorkerId: String = UUID.randomUUID().toString
+}
+
+private case class ParsedConsumerConfig(
+    streamName: String,
+    appName: String,
+    initialPositionInStreamExtended: Option[InitialPositionInStreamExtended]
+)
+
+private object ParsedConsumerConfig {
+  val KeyAppName = "application-name"
+  val KeyStreamName = "stream-name"
+  val KeyInitialPosition = "position.initial"
+  val KeyInitialPositionAtTimestampTime = "position.time"
+
+  val InitialPositionLatest = "latest"
+  val InitialPositionTrimHorizon = "trim-horizon"
+  val InitialPositionAtTimestamp = "at-timestamp"
+
+  def apply(config: Config): ParsedConsumerConfig = {
+    ParsedConsumerConfig(
+      streamName = config.getString(KeyStreamName),
+      appName = config.getString(KeyAppName),
+      initialPositionInStreamExtended = getStreamPosition(config)
+    )
+  }
+
+  private def getStreamPosition(config: Config): Option[InitialPositionInStreamExtended] = {
+    getStringOption(config, KeyInitialPosition)
       .map {
-        case StreamPositionLatest => latestPos
-        case StreamPositionHorizon =>
+        case InitialPositionLatest =>
+          InitialPositionInStreamExtended.newInitialPosition(InitialPositionInStream.LATEST)
+        case InitialPositionTrimHorizon =>
           InitialPositionInStreamExtended.newInitialPosition(InitialPositionInStream.TRIM_HORIZON)
-        case StreamPositionTimestamp =>
+        case InitialPositionAtTimestamp =>
           InitialPositionInStreamExtended.newInitialPositionAtTimestamp(
-            DateFormat.getInstance().parse(config.getString("position.time"))
+            DateFormat.getInstance().parse(config.getString(KeyInitialPositionAtTimestampTime))
           )
       }
-      .getOrElse(latestPos)
-
-    val kinesisClient = Option(kac).getOrElse(KinesisClientUtil.createKinesisAsyncClient(KinesisAsyncClient.builder()))
-    val dynamoClient = Option(dac).getOrElse(DynamoDbAsyncClient.builder.build())
-    val cloudWatchClient = Option(cwac).getOrElse(CloudWatchAsyncClient.builder.build())
-
-    ConsumerConfig(streamName, name, generateWorkerId(), kinesisClient, dynamoClient, cloudWatchClient, streamPosition)
   }
 
-  private def generateWorkerId(): String = UUID.randomUUID().toString
+  private def getStringOption(config: Config, key: String): Option[String] = {
+    if (config.hasPath(key)) Some(config.getString(key)) else None
+  }
 }
