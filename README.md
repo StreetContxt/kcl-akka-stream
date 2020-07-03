@@ -120,23 +120,22 @@ com.contxt.kinesis {
 
     position {
       initial = "latest" # (latest, trim-horizon, at-timestamp) Defaults to latest.
-      # time = "" # Only required if position is at-timestamp. Supports a valid Java Date parseable datetime string
+      time = "" # Only required if position is at-timestamp. Supports a valid Java Date parseable datetime string
     }
 
     # Note: Configurations below need to be in this location (com.contxt.kinesis.consumer) to be found
 
-    # Optional stats reporting class that implements com.contxt.kinesis.ConsumerStats.
-    # stats-class-name = "com.contxt.kinesis.NoopConsumerStats" 
+    # Optional stats reporting class that implements com.contxt.kinesis.ConsumerStats
+    stats-class-name = "com.contxt.kinesis.NoopConsumerStats" 
 
     # Optional checkpoint configuration
-    # shard-checkpoint-config {
-    #   checkpoint-period = 60 seconds
-    #   checkpoint-after-processing-nr-of-records = 10000
-    #   max-wait-for-completion-on-stream-shutdown = 5 seconds
-    # }
+    shard-checkpoint-config {
+      checkpoint-period = 60 seconds
+      checkpoint-after-processing-nr-of-records = 10000
+      max-wait-for-completion-on-stream-shutdown = 5 seconds
+    }
   }
 }
-
 ```
 
 Then configure the consumer using the convenience method `ConsumerConfig.fromConfig`.
