@@ -13,18 +13,6 @@ class ConfigTest extends AnyWordSpec with Matchers with MockFactory {
 
   "ConsumerConfig" should {
 
-    "Support minimal configuration with default clients" in {
-      def consumerConfig =
-        ConsumerConfig(
-          streamName = "streamName",
-          appName = "applicationName"
-        )
-
-      consumerConfig.kinesisClient shouldNot be(null)
-      consumerConfig.dynamoClient shouldNot be(null)
-      consumerConfig.cloudwatchClient shouldNot be(null)
-    }
-
     "Use implicit clients" in {
       implicit val kinesis: KinesisAsyncClient = mock[KinesisAsyncClient]
       implicit val dynamo: DynamoDbAsyncClient = mock[DynamoDbAsyncClient]
