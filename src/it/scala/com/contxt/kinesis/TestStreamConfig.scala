@@ -39,9 +39,6 @@ case class TestStreamConfig(
       streamName,
       applicationName,
       workerId,
-      kinesisClient,
-      DynamoDbAsyncClient.builder.region(Region.of(regionName)).build(),
-      CloudWatchAsyncClient.builder.region(Region.of(regionName)).build(),
       initialPositionInStream,
       coordinatorConfig = Some(
         new CoordinatorConfig(applicationName)
@@ -52,6 +49,10 @@ case class TestStreamConfig(
           .retrievalSpecificConfig(new PollingConfig(streamName, kinesisClient))
           .initialPositionInStreamExtended(initialPositionInStream)
       )
+    )(
+      kinesisClient,
+      DynamoDbAsyncClient.builder.region(Region.of(regionName)).build(),
+      CloudWatchAsyncClient.builder.region(Region.of(regionName)).build()
     )
   }
 
