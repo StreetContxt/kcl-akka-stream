@@ -3,6 +3,7 @@ pull_request_rules:
     conditions:
       - "status-success=ci/circleci: test"
       - "#approved-reviews-by>=2"
+      - label=ready-to-merge
     actions:
       merge:
         method: merge
@@ -10,7 +11,7 @@ pull_request_rules:
     conditions:
       - author=github-scx
       - "status-success=ci/circleci: test"
-      - body~=labels:.*semver(-patch|-minor)
+      - body~=labels:.*semver-patch
       - label=dependency
     actions:
       merge:
