@@ -31,7 +31,7 @@ val amazonKinesisClient = "software.amazon.kinesis" % "amazon-kinesis-client" % 
 val scalaKinesisProducer = "com.streetcontxt" %% "kpl-scala" % "1.1.0"
 val scalaCollectionCompat = "org.scala-lang.modules" %% "scala-collection-compat" % "2.1.6"
 val scalaTest = "org.scalatest" %% "scalatest" % "3.2.1"
-val scalaMock = "org.scalamock" %% "scalamock" % "4.4.0"
+val scalaMock = "org.scalamock" %% "scalamock" % "5.0.0"
 val akkaStream = "com.typesafe.akka" %% "akka-stream" % AkkaVersion
 val akkaStreamTestkit = "com.typesafe.akka" %% "akka-stream-testkit" % AkkaVersion
 
