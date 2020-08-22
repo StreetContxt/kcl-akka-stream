@@ -27,7 +27,7 @@ val AkkaVersion = "2.6.8"
 
 val slf4j = "org.slf4j" % "slf4j-api" % "1.7.30"
 val logback = "ch.qos.logback" % "logback-classic" % "1.2.3"
-val amazonKinesisClient = "software.amazon.kinesis" % "amazon-kinesis-client" % "2.2.11"
+val amazonKinesisClient = "software.amazon.kinesis" % "amazon-kinesis-client" % "2.3.0"
 val scalaKinesisProducer = "com.streetcontxt" %% "kpl-scala" % "1.1.0"
 val scalaCollectionCompat = "org.scala-lang.modules" %% "scala-collection-compat" % "2.1.6"
 val scalaTest = "org.scalatest" %% "scalatest" % "3.2.1"
