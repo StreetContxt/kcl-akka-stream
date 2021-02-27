@@ -23,7 +23,7 @@ version := sys.props
   }
   .getOrElse("LOCAL-SNAPSHOT")
 
-val AkkaVersion = "2.6.12"
+val AkkaVersion = "2.6.13"
 
 val slf4j = "org.slf4j" % "slf4j-api" % "1.7.30"
 val logback = "ch.qos.logback" % "logback-classic" % "1.2.3"
