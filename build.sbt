@@ -3,9 +3,9 @@ Defaults.itSettings
 val TestAndIntegrationTest = "test,it"
 
 organization in ThisBuild := "com.streetcontxt"
-scalaVersion in ThisBuild := "2.13.3"
+scalaVersion in ThisBuild := "2.13.5"
 scalacOptions ++= Seq("-deprecation", "-feature")
-crossScalaVersions in ThisBuild := Seq("2.12.11", "2.13.3")
+crossScalaVersions in ThisBuild := Seq("2.12.11", "2.13.5")
 licenses in ThisBuild += ("Apache-2.0", url("https://www.apache.org/licenses/LICENSE-2.0.html"))
 bintrayOrganization in ThisBuild := Some("streetcontxt")
 
