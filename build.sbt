@@ -23,14 +23,14 @@ version := sys.props
   }
   .getOrElse("LOCAL-SNAPSHOT")
 
-val AkkaVersion = "2.6.12"
+val AkkaVersion = "2.6.13"
 
 val slf4j = "org.slf4j" % "slf4j-api" % "1.7.30"
 val logback = "ch.qos.logback" % "logback-classic" % "1.2.3"
-val amazonKinesisClient = "software.amazon.kinesis" % "amazon-kinesis-client" % "2.3.3"
+val amazonKinesisClient = "software.amazon.kinesis" % "amazon-kinesis-client" % "2.3.4"
 val scalaKinesisProducer = "com.streetcontxt" %% "kpl-scala" % "1.1.0"
-val scalaCollectionCompat = "org.scala-lang.modules" %% "scala-collection-compat" % "2.4.2"
-val scalaTest = "org.scalatest" %% "scalatest" % "3.2.3"
+val scalaCollectionCompat = "org.scala-lang.modules" %% "scala-collection-compat" % "2.3.2"
+val scalaTest = "org.scalatest" %% "scalatest" % "3.2.6"
 val scalaMock = "org.scalamock" %% "scalamock" % "5.1.0"
 val akkaStream = "com.typesafe.akka" %% "akka-stream" % AkkaVersion
 val akkaStreamTestkit = "com.typesafe.akka" %% "akka-stream-testkit" % AkkaVersion
