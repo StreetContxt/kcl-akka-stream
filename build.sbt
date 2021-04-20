@@ -29,7 +29,7 @@ scalaVersion in ThisBuild := "2.13.5"
 scalacOptions ++= Seq("-deprecation", "-feature")
 crossScalaVersions in ThisBuild := Seq("2.12.13", "2.13.5")
 licenses in ThisBuild += ("Apache-2.0", url("https://www.apache.org/licenses/LICENSE-2.0.html"))
-ThisBuild / sonatypeCredentialHost := "s01.oss.sonatype.org"
+sonatypeCredentialHost := "s01.oss.sonatype.org"
 
 name := "kcl-akka-stream"
 
