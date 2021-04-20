@@ -1,27 +1,36 @@
+inThisBuild(
+  List(
+    organization := "io.github.streetcontxt",
+    homepage := Some(url("https://github.com/streetcontxt/kcl-akka-stream")),
+    licenses := List("Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0")),
+    developers := List(
+      Developer(
+        "agenovese",
+        "Angelo Gerard Genovese",
+        "angelo.gerard.genovese@gmail.com",
+        url("https://github.com/agenovese")
+      ),
+      Developer(
+        "elise-scx",
+        "Elise Cormie",
+        "elise@streetcontxt.com",
+        url("https://github.com/elise-scx")
+      )
+    )
+  )
+)
+
 configs(IntegrationTest)
 Defaults.itSettings
 val TestAndIntegrationTest = "test,it"
 
-organization in ThisBuild := "com.streetcontxt"
+organization in ThisBuild := "io.github.streetcontxt"
 scalaVersion in ThisBuild := "2.13.5"
 scalacOptions ++= Seq("-deprecation", "-feature")
 crossScalaVersions in ThisBuild := Seq("2.12.13", "2.13.5")
 licenses in ThisBuild += ("Apache-2.0", url("https://www.apache.org/licenses/LICENSE-2.0.html"))
-bintrayOrganization in ThisBuild := Some("streetcontxt")
-
-resolvers in ThisBuild += Resolver.bintrayRepo("streetcontxt", "maven")
 
 name := "kcl-akka-stream"
-
-val versionPattern = "release-([0-9.]*)".r
-version := sys.props
-  .get("CIRCLE_TAG")
-  .orElse(sys.env.get("CIRCLE_TAG"))
-  .flatMap {
-    case versionPattern(v) => Some(v)
-    case _                 => None
-  }
-  .getOrElse("LOCAL-SNAPSHOT")
 
 val AkkaVersion = "2.6.13"
 
@@ -43,6 +52,5 @@ libraryDependencies ++= Seq(
   scalaTest % TestAndIntegrationTest,
   akkaStreamTestkit % TestAndIntegrationTest,
   logback % TestAndIntegrationTest,
-  scalaMock % Test,
-  scalaKinesisProducer % IntegrationTest
+  scalaMock % Test
 )
