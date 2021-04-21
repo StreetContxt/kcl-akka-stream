@@ -1,34 +1,44 @@
+inThisBuild(
+  List(
+    organization := "io.github.streetcontxt",
+    homepage := Some(url("https://github.com/streetcontxt/kcl-akka-stream")),
+    licenses := List("Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0")),
+    developers := List(
+      Developer(
+        "agenovese",
+        "Angelo Gerard Genovese",
+        "angelo.gerard.genovese@gmail.com",
+        url("https://github.com/agenovese")
+      ),
+      Developer(
+        "elise-scx",
+        "Elise Cormie",
+        "elise@streetcontxt.com",
+        url("https://github.com/elise-scx")
+      )
+    )
+  )
+)
+
 configs(IntegrationTest)
 Defaults.itSettings
 val TestAndIntegrationTest = "test,it"
 
-organization in ThisBuild := "com.streetcontxt"
+organization in ThisBuild := "io.github.streetcontxt"
 scalaVersion in ThisBuild := "2.13.5"
 scalacOptions ++= Seq("-deprecation", "-feature")
 crossScalaVersions in ThisBuild := Seq("2.12.13", "2.13.5")
 licenses in ThisBuild += ("Apache-2.0", url("https://www.apache.org/licenses/LICENSE-2.0.html"))
-bintrayOrganization in ThisBuild := Some("streetcontxt")
-
-resolvers in ThisBuild += Resolver.bintrayRepo("streetcontxt", "maven")
+sonatypeCredentialHost := "s01.oss.sonatype.org"
 
 name := "kcl-akka-stream"
-
-val versionPattern = "release-([0-9.]*)".r
-version := sys.props
-  .get("CIRCLE_TAG")
-  .orElse(sys.env.get("CIRCLE_TAG"))
-  .flatMap {
-    case versionPattern(v) => Some(v)
-    case _                 => None
-  }
-  .getOrElse("LOCAL-SNAPSHOT")
 
 val AkkaVersion = "2.6.14"
 
 val slf4j = "org.slf4j" % "slf4j-api" % "1.7.30"
 val logback = "ch.qos.logback" % "logback-classic" % "1.2.3"
 val amazonKinesisClient = "software.amazon.kinesis" % "amazon-kinesis-client" % "2.3.4"
-val scalaKinesisProducer = "com.streetcontxt" %% "kpl-scala" % "1.1.0"
+val scalaKinesisProducer = "io.github.streetcontxt" %% "kpl-scala" % "2.0.0"
 val scalaCollectionCompat = "org.scala-lang.modules" %% "scala-collection-compat" % "2.4.3"
 val scalaTest = "org.scalatest" %% "scalatest" % "3.2.7"
 val scalaMock = "org.scalamock" %% "scalamock" % "5.1.0"
@@ -43,6 +53,6 @@ libraryDependencies ++= Seq(
   scalaTest % TestAndIntegrationTest,
   akkaStreamTestkit % TestAndIntegrationTest,
   logback % TestAndIntegrationTest,
-  scalaMock % Test,
-  scalaKinesisProducer % IntegrationTest
+  scalaKinesisProducer,
+  scalaMock % Test
 )
