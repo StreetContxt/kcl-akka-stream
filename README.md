@@ -1,6 +1,4 @@
 # kcl-akka-stream
-[![CircleCI](https://circleci.com/gh/StreetContxt/kcl-akka-stream/tree/master.svg?style=shield)](https://circleci.com/gh/StreetContxt/kcl-akka-stream/tree/master)
-[![Bintray](https://img.shields.io/bintray/v/streetcontxt/maven/kcl-akka-stream)](https://bintray.com/streetcontxt/maven/kcl-akka-stream/_latestVersion)
 
 Akka Streaming Source backed by Kinesis Client Library (KCL 2.x).
 
@@ -13,8 +11,7 @@ This library is thoroughly tested and currently used in production.
 ## Installation
 
 ```
-resolvers in ThisBuild += Resolver.bintrayRepo("streetcontxt", "maven")
-libraryDependencies += "com.streetcontxt" %% "kcl-akka-stream" % "3.0.1"
+libraryDependencies += "com.streetcontxt" %% "kcl-akka-stream" % "4.1.1"
 ```
 
 
