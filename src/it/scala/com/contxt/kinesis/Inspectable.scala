@@ -13,8 +13,9 @@ import scala.jdk.CollectionConverters._
 
 object Inspectable {
 
-  /** Returns a Sink that collects incoming elements into a list, and whose state can be inspected at any time
-    * by using the function returned as the materialized value. */
+  /** Returns a Sink that collects incoming elements into a list, and whose state can be inspected at any time by using
+    * the function returned as the materialized value.
+    */
   def sink[A]: Sink[A, () => IndexedSeq[A]] = {
     val stage: GraphStageWithMaterializedValue[SinkShape[A], ConcurrentLinkedQueue[A]] =
       new GraphStageWithMaterializedValue[SinkShape[A], ConcurrentLinkedQueue[A]] {
