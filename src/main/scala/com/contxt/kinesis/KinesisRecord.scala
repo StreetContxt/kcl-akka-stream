@@ -24,15 +24,15 @@ case class KinesisRecord(
 
   /** Record marked as processed are eligible for being checkpointed at driver's discretion.
     *
-    * A shard in a Kinesis stream is an ordered sequence of records. The shard is checkpointed by storing an offset
-    * of the last processed record. However, if a record is not processed (for example, because of an exception),
-    * then no further records after it can be checkpointed.
+    * A shard in a Kinesis stream is an ordered sequence of records. The shard is checkpointed by storing an offset of
+    * the last processed record. However, if a record is not processed (for example, because of an exception), then no
+    * further records after it can be checkpointed.
     *
-    * KinesisSource keeps track of all the uncheckpointed records and their ordering. This means you can process
-    * records out of order in an asynchronous fashion. Each record must be eventually marked as processed by
-    * calling `markProcessed()`, or the steam must be terminated with an exception. If the stream continues
-    * after failing to process a record, and not marking it as processed, then no further records can be checkpointed,
-    * eventually causing the system to run out of memory.
+    * KinesisSource keeps track of all the uncheckpointed records and their ordering. This means you can process records
+    * out of order in an asynchronous fashion. Each record must be eventually marked as processed by calling
+    * `markProcessed()`, or the steam must be terminated with an exception. If the stream continues after failing to
+    * process a record, and not marking it as processed, then no further records can be checkpointed, eventually causing
+    * the system to run out of memory.
     */
   def markProcessed(): Unit = completionPromise.trySuccess(Done)
 

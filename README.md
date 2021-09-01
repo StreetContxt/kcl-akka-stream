@@ -11,7 +11,7 @@ This library is thoroughly tested and currently used in production.
 ## Installation
 
 ```
-libraryDependencies += "com.streetcontxt" %% "kcl-akka-stream" % "4.1.1"
+libraryDependencies += "io.github.streetcontxt" %% "kcl-akka-stream" % "5.0.0"
 ```
 
 
