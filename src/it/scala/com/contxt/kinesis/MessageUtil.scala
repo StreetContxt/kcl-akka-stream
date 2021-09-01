@@ -2,9 +2,10 @@ package com.contxt.kinesis
 
 object MessageUtil {
 
-  /** Requires unique messages that were sent at least once and then processed at least once.
-    * Sending a message batch can be retried, as long as the order of messages remains the same.
-    * Processing of messages can restart at an earlier checkpoint, as long as the order of messages remains the same. */
+  /** Requires unique messages that were sent at least once and then processed at least once. Sending a message batch
+    * can be retried, as long as the order of messages remains the same. Processing of messages can restart at an
+    * earlier checkpoint, as long as the order of messages remains the same.
+    */
   def dedupAndGroupByKey(keyMessagePairs: Seq[(String, String)]): Map[String, IndexedSeq[String]] = {
     groupByKey(keyMessagePairs).map {
       case (key, value) => key -> removeReprocessed(key, value)
