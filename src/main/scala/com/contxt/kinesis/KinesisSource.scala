@@ -24,23 +24,24 @@ import scala.util.control.NonFatal
   * See [[http://docs.aws.amazon.com/streams/latest/dev/troubleshooting-consumers.html Kinesis Troubleshooting Guide]]
   * for more details.
   *
-  * - If you require mutually exclusive processing, or want to avoid spurious errors caused by concurrent processing of
-  * messages with the same key by different nodes, [[https://kafka.apache.org/ check out Kafka]].
+  *   - If you require mutually exclusive processing, or want to avoid spurious errors caused by concurrent processing
+  *     of messages with the same key by different nodes, [[https://kafka.apache.org/ check out Kafka]].
   *
-  * Kinesis producer library '''does not provide message ordering guarantees''' at a reasonable throughput,
-  * see [this ticket](https://github.com/awslabs/amazon-kinesis-producer/issues/23) for more details.
+  * Kinesis producer library '''does not provide message ordering guarantees''' at a reasonable throughput, see [this
+  * ticket](https://github.com/awslabs/amazon-kinesis-producer/issues/23) for more details.
   *
-  * - If you require efficient messages transfer while maintaining order, [[https://kafka.apache.org/ check out Kafka]].
+  *   - If you require efficient messages transfer while maintaining order,
+  *     [[https://kafka.apache.org/ check out Kafka]].
   *
-  * '''KCL license is not compatible with open source licenses!''' See
-  * [this discussion](https://issues.apache.org/jira/browse/LEGAL-198) for more details.
+  * '''KCL license is not compatible with open source licenses!''' See [this
+  * discussion](https://issues.apache.org/jira/browse/LEGAL-198) for more details.
   *
-  * - If you would like to work with an open-source compatible library, [[https://kafka.apache.org/ check out Kafka]].
+  *   - If you would like to work with an open-source compatible library, [[https://kafka.apache.org/ check out Kafka]].
   */
 object KinesisSource {
 
-  /** Creates a Source backed by Kinesis Consumer Library, with materialized valued of Future[Done] which completes
-    * when the stream has terminated and the Kinesis worker has fully shutdown.
+  /** Creates a Source backed by Kinesis Consumer Library, with materialized valued of Future[Done] which completes when
+    * the stream has terminated and the Kinesis worker has fully shutdown.
     */
   def apply(kclConfig: ConsumerConfig, config: Config = ConfigFactory.load()): Source[KinesisRecord, Future[Done]] = {
     val shardCheckpointConfig = ShardCheckpointConfig(config)
@@ -48,8 +49,8 @@ object KinesisSource {
     KinesisSource(createKclWorker, kclConfig, shardCheckpointConfig, consumerStats)
   }
 
-  /** Creates a Source backed by Kinesis Consumer Library, with materialized valued of Future[Done] which completes
-    * when the stream has terminated and the Kinesis worker has fully shutdown.
+  /** Creates a Source backed by Kinesis Consumer Library, with materialized valued of Future[Done] which completes when
+    * the stream has terminated and the Kinesis worker has fully shutdown.
     */
   def apply(
       kclConfig: ConsumerConfig,
