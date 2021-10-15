@@ -33,7 +33,7 @@ sonatypeCredentialHost := "s01.oss.sonatype.org"
 
 name := "kcl-akka-stream"
 
-val AkkaVersion = "2.6.16"
+val AkkaVersion = "2.6.17"
 
 val slf4j = "org.slf4j" % "slf4j-api" % "1.7.32"
 val logback = "ch.qos.logback" % "logback-classic" % "1.2.5"
