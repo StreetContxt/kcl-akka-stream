@@ -36,7 +36,7 @@ name := "kcl-akka-stream"
 val AkkaVersion = "2.6.16"
 
 val slf4j = "org.slf4j" % "slf4j-api" % "1.7.32"
-val logback = "ch.qos.logback" % "logback-classic" % "1.2.5"
+val logback = "ch.qos.logback" % "logback-classic" % "1.2.9"
 val amazonKinesisClient = "software.amazon.kinesis" % "amazon-kinesis-client" % "2.3.6"
 val scalaKinesisProducer = "io.github.streetcontxt" %% "kpl-scala" % "2.0.0"
 val scalaCollectionCompat = "org.scala-lang.modules" %% "scala-collection-compat" % "2.5.0"
