@@ -25,9 +25,9 @@ Defaults.itSettings
 val TestAndIntegrationTest = "test,it"
 
 organization in ThisBuild := "io.github.streetcontxt"
-scalaVersion in ThisBuild := "2.13.6"
+scalaVersion in ThisBuild := "2.13.14"
 scalacOptions ++= Seq("-deprecation", "-feature")
-crossScalaVersions in ThisBuild := Seq("2.12.13", "2.13.6")
+crossScalaVersions in ThisBuild := Seq("2.12.13", "2.13.14")
 licenses in ThisBuild += ("Apache-2.0", url("https://www.apache.org/licenses/LICENSE-2.0.html"))
 sonatypeCredentialHost := "s01.oss.sonatype.org"
 
